@@ -13,44 +13,44 @@ func newWindsurfCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "windsurf",
-		Short: "Install Windsurf configuration files",
-		Long:  "Install local and global configuration files for Windsurf",
+		Short: "Install Windsurf rules-for-ai files",
+		Long:  "Install local and global rules-for-ai files for Windsurf",
 		Run: func(cmd *cobra.Command, args []string) {
 			// Create installer instance
 			installer := installer.NewWindsurfInstaller()
 
 			// Process based on flags
 			if localOnly {
-				fmt.Println("Installing Windsurf local configuration file...")
+				fmt.Println("Installing Windsurf local rules-for-ai file...")
 				err := installer.InstallLocal()
 				if err != nil {
 					fmt.Printf("Error during installation: %v\n", err)
 					return
 				}
-				fmt.Println("Local configuration file installation completed")
+				fmt.Println("Local rules-for-ai file installation completed")
 			} else if globalOnly {
-				fmt.Println("Installing Windsurf global configuration file...")
+				fmt.Println("Installing Windsurf global rules-for-ai file...")
 				err := installer.InstallGlobal()
 				if err != nil {
 					fmt.Printf("Error during installation: %v\n", err)
 					return
 				}
-				fmt.Println("Global configuration file installation completed")
+				fmt.Println("Global rules-for-ai file installation completed")
 			} else {
-				fmt.Println("Installing all Windsurf configuration files...")
+				fmt.Println("Installing all Windsurf rules-for-ai files...")
 				err := installer.InstallAll()
 				if err != nil {
 					fmt.Printf("Error during installation: %v\n", err)
 					return
 				}
-				fmt.Println("All configuration files installation completed")
+				fmt.Println("All rules-for-ai files installation completed")
 			}
 		},
 	}
 
 	// Add flags
-	cmd.Flags().BoolVarP(&localOnly, "local", "l", false, "Install only local configuration file")
-	cmd.Flags().BoolVarP(&globalOnly, "global", "g", false, "Install only global configuration file")
+	cmd.Flags().BoolVarP(&localOnly, "local", "l", false, "Install only local rules-for-ai file")
+	cmd.Flags().BoolVarP(&globalOnly, "global", "g", false, "Install only global rules-for-ai file")
 
 	// Make flags mutually exclusive
 	cmd.MarkFlagsMutuallyExclusive("local", "global")

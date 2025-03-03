@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -10,18 +11,19 @@ import (
 func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "airules",
-		Short: "AI Editor Configuration Installer",
-		Long: `airules is a tool for installing configuration files
+		Short: "AI Editor rules Installer",
+		Long: `airules is a tool for installing rules-for-ai files
 for AI-powered editors like Windsurf and Cursor to appropriate locations.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// Display help if no flags specified
-			cmd.Help()
+			if err := cmd.Help(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error displaying help: %v\n", err)
+			}
 		},
 	}
 
 	// Add subcommands
 	cmd.AddCommand(newWindsurfCmd())
-	cmd.AddCommand(newCursorCmd())
 	cmd.AddCommand(newVersionCmd())
 
 	return cmd

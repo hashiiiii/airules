@@ -1,0 +1,37 @@
+version: 2
+updates:
+  # Manage Go module dependencies
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "go"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # Only perform important updates automatically
+    # Security updates always take priority
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    # Major version updates require manual review
+    versioning-strategy: "auto"
+
+  # Manage GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    # Exclude golangci-lint from auto-updates to maintain consistent linting results
+    ignore:
+      - dependency-name: "golangci/golangci-lint-action"

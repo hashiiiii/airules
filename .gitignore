@@ -23,6 +23,10 @@ bin/
 # Documentation directory
 docs/
 
+# Template directory - ignore symlink
+templates
+
+
 # Go workspace file
 go.work
 go.work.sum

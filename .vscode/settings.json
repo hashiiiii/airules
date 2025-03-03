@@ -1,0 +1,16 @@
+{
+    "go.lintTool": "golangci-lint",
+    "go.lintFlags": [
+        "--fast"
+    ],
+    "go.lintOnSave": "package",
+    "go.formatTool": "gofmt",
+    "editor.formatOnSave": true,
+    "[go]": {
+        "editor.defaultFormatter": "golang.go",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
+    "terminal.integrated.fontFamily": "Menlo, Monaco, 'Courier New', monospace"
+}

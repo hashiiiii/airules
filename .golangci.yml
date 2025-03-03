@@ -1,0 +1,41 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+  tests: true
+  build-tags:
+    - integration
+
+linters:
+  enable:
+    - errcheck        # Detects unchecked errors
+    - gosimple        # Suggests code simplification
+    - govet           # Go's static analyzer
+    - ineffassign     # Detects ineffective assignments
+    - staticcheck     # Advanced static analysis
+    - typecheck       # Type checking
+    - unused          # Detects unused code
+    - gofmt           # Standard formatter
+    - goimports       # Organizes imports
+    - misspell        # Detects spelling mistakes
+    - revive          # Alternative to golint
+    - whitespace      # Detects redundant whitespace
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+        disabled: false
+  gofmt:
+    simplify: true
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+  max-issues-per-linter: 0
+  max-same-issues: 0

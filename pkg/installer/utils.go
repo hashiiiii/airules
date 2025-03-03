@@ -42,27 +42,3 @@ func copyFile(src, dest string) error {
 
 	return nil
 }
-
-// fileExists is a utility function to check if a file exists
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
-}
-
-// ensureDirExists is a utility function to ensure a directory exists
-func ensureDirExists(dir string) error {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return os.MkdirAll(dir, 0755)
-	}
-	return nil
-}
-
-// backupFile is a utility function to backup an existing file
-func backupFile(path string) error {
-	if !fileExists(path) {
-		return nil
-	}
-
-	backupPath := path + ".backup"
-	return copyFile(path, backupPath)
-}

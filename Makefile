@@ -1,68 +1,70 @@
-# Makefile
+# Define variables
+BINARY      := airules
+BUILD_DIR   := bin
+ENTRY_PATH  := cmd/airules/main.go
+GOPATH      := $(shell go env GOPATH)
 
-GO=go
-BINARY=airules
-BUILD_DIR=bin
-TEMPLATE_DIR=templates
+# Set default target to help
+.DEFAULT_GOAL := help
 
-# デフォルトターゲット
+.PHONY: help
+help: ## Display this help
+	@echo "-----------------------------------------------------------"
+	@echo "Usage: make [target]"
+	@echo
+	@echo "Targets:"
+	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_.-]+:.*?##/ { \
+		printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 \
+	}' $(MAKEFILE_LIST)
+	@echo "-----------------------------------------------------------"
+
+.PHONY: info
+info: ## Display environment variables
+	@echo "-----------------------------------------------------------"
+	@echo "Environment variables:"
+	@printf "  \033[36m%-16s\033[0m %s\n" "BINARY" "$(BINARY)"
+	@printf "  \033[36m%-16s\033[0m %s\n" "BUILD_DIR" "$(BUILD_DIR)"
+	@printf "  \033[36m%-16s\033[0m %s\n" "ENTRY_PATH" "$(ENTRY_PATH)"
+	@printf "  \033[36m%-16s\033[0m %s\n" "GOPATH" "$(GOPATH)"
+	@echo "-----------------------------------------------------------"
+
 .PHONY: all
-all: clean build
+all: clean build ## Run clean build
 
-# ビルド
+.PHONY: clean
+clean: ## Clean the build directory
+	@echo "Cleaning..."
+	@rm -rf $(BUILD_DIR) 2>/dev/null || true
+
 .PHONY: build
-build:
+build: ## Build the binary
 	@echo "Building $(BINARY)..."
 	@mkdir -p $(BUILD_DIR)
-	$(GO) build -o $(BUILD_DIR)/$(BINARY) main.go
+	go build -o $(BUILD_DIR)/$(BINARY) $(ENTRY_PATH)
 
-# クリーン
-.PHONY: clean
-clean:
-	@echo "Cleaning..."
-	@rm -rf $(BUILD_DIR)
-
-# テスト
-.PHONY: test
-test:
-	@echo "Running tests..."
-	$(GO) test -v ./...
-
-# テストカバレッジ
-.PHONY: test-coverage
-test-coverage:
-	@echo "Running tests with coverage..."
-	$(GO) test -coverprofile=coverage.out ./...
-	$(GO) tool cover -html=coverage.out -o coverage.html
-
-# エンドツーエンドテスト
-.PHONY: test-e2e
-test-e2e:
-	@echo "Running end-to-end tests..."
-	$(GO) test -v ./e2e
-
-# インストール
-.PHONY: install
-install: build
-	@echo "Installing $(BINARY) to $(GOPATH)/bin"
-	@cp $(BUILD_DIR)/$(BINARY) $(GOPATH)/bin/
-
-# 依存関係の更新
 .PHONY: deps
-deps:
+deps: ## Update dependencies
 	@echo "Updating dependencies..."
-	$(GO) mod tidy
+	go mod tidy
 
-# ヘルプ
-.PHONY: help
-help:
-	@echo "使用可能なターゲット:"
-	@echo "  all            - クリーンビルド"
-	@echo "  build          - バイナリをビルド"
-	@echo "  clean          - ビルドディレクトリを削除"
-	@echo "  test           - すべてのテストを実行"
-	@echo "  test-coverage  - カバレッジ付きでテストを実行"
-	@echo "  test-e2e       - エンドツーエンドテストを実行"
-	@echo "  install        - $(GOPATH)/bin にバイナリをインストール"
-	@echo "  deps           - 依存関係を更新"
-	@echo "  help           - このヘルプを表示"
+.PHONY: test
+test: ## Run all tests
+	@echo "Running tests..."
+	go test -v ./...
+
+.PHONY: test-coverage
+test-coverage: ## Run tests with coverage
+	@echo "Running tests with coverage..."
+	go test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+
+.PHONY: test-e2e
+test-e2e: ## Run end-to-end tests
+	@echo "Running end-to-end tests..."
+	go test -v ./e2e
+
+.PHONY: lint
+lint: ## Run linter and fix issues
+	@echo "Running linter with auto-fix..."
+	gofmt -w -s .
+	golangci-lint run --fix ./...
