@@ -21,5 +21,5 @@ jobs:
         with:
           version: 'v1.64.6'
           skip-cache: false
-          skip-pkg-cache: false
-          skip-build-cache: false
+          skip-save-cache: false
+          cache-invalidation-interval: '168h' # 1week
