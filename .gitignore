@@ -26,6 +26,8 @@ docs/
 # Template directory - ignore symlink
 templates
 
+# idea
+.idea/
 
 # Go workspace file
 go.work
