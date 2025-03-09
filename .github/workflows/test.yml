@@ -22,7 +22,7 @@ jobs:
     - name: Get Go version
       id: go-version
       run: |
-        GO_VERSION=$(shell go version | cut -d ' ' -f 3 | sed 's/go//')
+        GO_VERSION=$(go version | cut -d ' ' -f 3 | sed 's/go//')
         echo "go_version=$GO_VERSION" >> $GITHUB_OUTPUT
       shell: bash
 
