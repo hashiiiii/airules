@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,8 +73,8 @@ func Test_GetInstallPath(t *testing.T) {
 				destDir  string
 				err      bool
 			}{
-				srcPath:  "templates/local/.windsurfrules",
-				destPath: "localDest/.windsurfrules",
+				srcPath:  filepath.Join("templates", "local", ".windsurfrules"),
+				destPath: filepath.Join("localDest", ".windsurfrules"),
 				destDir:  "localDest",
 				err:      false,
 			},
@@ -89,8 +90,8 @@ func Test_GetInstallPath(t *testing.T) {
 				destDir  string
 				err      bool
 			}{
-				srcPath:  "templates/global/global_rules.md",
-				destPath: "globalDest/global_rules.md",
+				srcPath:  filepath.Join("templates", "global", "global_rules.md"),
+				destPath: filepath.Join("globalDest", "global_rules.md"),
 				destDir:  "globalDest",
 				err:      false,
 			},

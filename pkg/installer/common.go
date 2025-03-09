@@ -55,18 +55,6 @@ func (l Language) String() string {
 	}
 }
 
-// LanguageFromString converts a string to Language
-func LanguageFromString(s string) Language {
-	switch s {
-	case "en":
-		return English
-	case "ja":
-		return Japanese
-	default:
-		return English // Default to English
-	}
-}
-
 // Installer interface defines methods that must be implemented by installers for each editor
 type Installer interface {
 	// Install installs configuration files based on the installation type
@@ -79,13 +67,23 @@ func CopyFile(src, dest string) error {
 	if err != nil {
 		return fmt.Errorf("could not open source file: %w", err)
 	}
-	defer srcFile.Close()
+	defer func(srcFile *os.File) {
+		err := srcFile.Close()
+		if err != nil {
+			_ = fmt.Errorf("could not close source file: %w", err)
+		}
+	}(srcFile)
 
 	destFile, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("could not create destination file: %w", err)
 	}
-	defer destFile.Close()
+	defer func(destFile *os.File) {
+		err := destFile.Close()
+		if err != nil {
+			_ = fmt.Errorf("could not close source file: %w", err)
+		}
+	}(destFile)
 
 	_, err = io.Copy(destFile, srcFile)
 	if err != nil {

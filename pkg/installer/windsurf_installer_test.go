@@ -151,11 +151,11 @@ func Test_Install(t *testing.T) {
 
 	mockFS := new(MockFileSystem)
 	installer := &WindsurfInstaller{
-		templateDir:    "/template",
-		localDestDir:   "/local",
-		localFileName:  "local.rules",
-		globalDestDir:  "/global",
-		globalFileName: "global.rules",
+		templateDir:    "templates",
+		localDestDir:   "local",
+		localFileName:  ".windsurfrules",
+		globalDestDir:  "global",
+		globalFileName: "global_rules.md",
 		lang:           English,
 		fs:             mockFS,
 	}
@@ -180,8 +180,8 @@ func Test_Install(t *testing.T) {
 			},
 			setup: struct{ mock func(*MockFileSystem) }{
 				mock: func(mockFS *MockFileSystem) {
-					mockFS.On("MkdirAll", "/local", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("/template", "local", "local.rules"), filepath.Join("/local", "local.rules")).Return(nil)
+					mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(nil)
+					mockFS.On("CopyFile", filepath.Join("templates", "local", ".windsurfrules"), filepath.Join("local", ".windsurfrules")).Return(nil)
 				},
 			},
 			want: struct {
@@ -199,8 +199,8 @@ func Test_Install(t *testing.T) {
 			},
 			setup: struct{ mock func(*MockFileSystem) }{
 				mock: func(mockFS *MockFileSystem) {
-					mockFS.On("MkdirAll", "/global", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("/template", "global", "global.rules"), filepath.Join("/global", "global.rules")).Return(nil)
+					mockFS.On("MkdirAll", "global", os.FileMode(0755)).Return(nil)
+					mockFS.On("CopyFile", filepath.Join("templates", "global", "global_rules.md"), filepath.Join("global", "global_rules.md")).Return(nil)
 				},
 			},
 			want: struct {
@@ -218,10 +218,10 @@ func Test_Install(t *testing.T) {
 			},
 			setup: struct{ mock func(*MockFileSystem) }{
 				mock: func(mockFS *MockFileSystem) {
-					mockFS.On("MkdirAll", "/local", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("/template", "local", "local.rules"), filepath.Join("/local", "local.rules")).Return(nil)
-					mockFS.On("MkdirAll", "/global", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("/template", "global", "global.rules"), filepath.Join("/global", "global.rules")).Return(nil)
+					mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(nil)
+					mockFS.On("CopyFile", filepath.Join("templates", "local", ".windsurfrules"), filepath.Join("local", ".windsurfrules")).Return(nil)
+					mockFS.On("MkdirAll", "global", os.FileMode(0755)).Return(nil)
+					mockFS.On("CopyFile", filepath.Join("templates", "global", "global_rules.md"), filepath.Join("global", "global_rules.md")).Return(nil)
 				},
 			},
 			want: struct {
@@ -239,7 +239,7 @@ func Test_Install(t *testing.T) {
 			},
 			setup: struct{ mock func(*MockFileSystem) }{
 				mock: func(mockFS *MockFileSystem) {
-					mockFS.On("MkdirAll", "/local", os.FileMode(0755)).Return(errors.New("mkdir failed"))
+					mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(errors.New("mkdir failed"))
 				},
 			},
 			want: struct {
@@ -257,10 +257,10 @@ func Test_Install(t *testing.T) {
 			},
 			setup: struct{ mock func(*MockFileSystem) }{
 				mock: func(mockFS *MockFileSystem) {
-					mockFS.On("MkdirAll", "/local", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("/template", "local", "local.rules"), filepath.Join("/local", "local.rules")).Return(nil)
-					mockFS.On("MkdirAll", "/global", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("/template", "global", "global.rules"), filepath.Join("/global", "global.rules")).Return(errors.New("copy failed"))
+					mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(nil)
+					mockFS.On("CopyFile", filepath.Join("templates", "local", ".windsurfrules"), filepath.Join("local", ".windsurfrules")).Return(nil)
+					mockFS.On("MkdirAll", "global", os.FileMode(0755)).Return(nil)
+					mockFS.On("CopyFile", filepath.Join("templates", "global", "global_rules.md"), filepath.Join("global", "global_rules.md")).Return(errors.New("copy failed"))
 				},
 			},
 			want: struct {
@@ -329,7 +329,7 @@ func Test_NewWindsurfInstaller(t *testing.T) {
 				templateDir string
 				lang        Language
 			}{
-				templateDir: "/valid/template/dir",
+				templateDir: filepath.Join("valid", "template", "dir"),
 				lang:        English,
 			},
 			want: struct {
@@ -346,7 +346,7 @@ func Test_NewWindsurfInstaller(t *testing.T) {
 				templateDir string
 				lang        Language
 			}{
-				templateDir: "/valid/template/dir",
+				templateDir: filepath.Join("valid", "template", "dir"),
 				lang:        Japanese,
 			},
 			want: struct {
@@ -397,7 +397,7 @@ func Test_NewWindsurfInstaller(t *testing.T) {
 				assert.Equal(t, tt.args.templateDir, installer.templateDir)
 				assert.Equal(t, ".", installer.localDestDir)
 				assert.Equal(t, ".windsurfrules", installer.localFileName)
-				assert.Contains(t, installer.globalDestDir, ".codeium/windsurf/memories")
+				assert.Contains(t, installer.globalDestDir, filepath.Join(".codeium", "windsurf", "memories"))
 				assert.Equal(t, "global_rules.md", installer.globalFileName)
 				assert.Equal(t, tt.args.lang, installer.lang)
 				assert.IsType(t, &DefaultFileSystem{}, installer.fs)
