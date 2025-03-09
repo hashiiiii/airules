@@ -1,7 +1,7 @@
 # Define variables
 BINARY      := airules
 BUILD_DIR   := bin
-ENTRY_PATH  := cmd/airules/main.go
+ENTRY_PATH  := main.go
 GOPATH      := $(shell go env GOPATH)
 
 # Set default target to help
@@ -50,7 +50,7 @@ deps: ## Update dependencies
 .PHONY: test
 test: ## Run all tests
 	@echo "Running tests..."
-	go test -v ./...
+	go test -v -parallel 4 ./...
 
 .PHONY: test-coverage
 test-coverage: ## Run tests with coverage
@@ -58,10 +58,6 @@ test-coverage: ## Run tests with coverage
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 
-.PHONY: test-e2e
-test-e2e: ## Run end-to-end tests
-	@echo "Running end-to-end tests..."
-	go test -v ./e2e
 
 .PHONY: lint
 lint: ## Run linter and fix issues

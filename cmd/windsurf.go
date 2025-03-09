@@ -9,51 +9,59 @@ import (
 
 // newWindsurfCmd returns the windsurf command
 func newWindsurfCmd() *cobra.Command {
-	var localOnly, globalOnly bool
+	var installTypeFlag string
+	var languageFlag string
 
 	cmd := &cobra.Command{
 		Use:   "windsurf",
 		Short: "Install Windsurf rules-for-ai files",
 		Long:  "Install local and global rules-for-ai files for Windsurf",
 		Run: func(cmd *cobra.Command, args []string) {
-			// Create installer instance
-			installer := installer.NewWindsurfInstaller()
-
-			// Process based on flags
-			if localOnly {
-				fmt.Println("Installing Windsurf local rules-for-ai file...")
-				err := installer.InstallLocal()
-				if err != nil {
-					fmt.Printf("Error during installation: %v\n", err)
-					return
-				}
-				fmt.Println("Local rules-for-ai file installation completed")
-			} else if globalOnly {
-				fmt.Println("Installing Windsurf global rules-for-ai file...")
-				err := installer.InstallGlobal()
-				if err != nil {
-					fmt.Printf("Error during installation: %v\n", err)
-					return
-				}
-				fmt.Println("Global rules-for-ai file installation completed")
-			} else {
-				fmt.Println("Installing all Windsurf rules-for-ai files...")
-				err := installer.InstallAll()
-				if err != nil {
-					fmt.Printf("Error during installation: %v\n", err)
-					return
-				}
-				fmt.Println("All rules-for-ai files installation completed")
+			var lang installer.Language
+			switch languageFlag {
+			case "ja", "japanese":
+				lang = installer.Japanese
+				fmt.Println("日本語版テンプレートを使用します...")
+			default:
+				lang = installer.English
+				fmt.Println("Using English templates...")
 			}
+
+			// Create installer instance
+			windsurfInstaller, err := installer.NewWindsurfInstaller(lang)
+			if err != nil {
+				fmt.Printf("Error creating installer: %v\n", err)
+				return
+			}
+
+			// Determine installation type based on flag
+			var installType installer.InstallType
+			switch installTypeFlag {
+			case "local":
+				installType = installer.Local
+				fmt.Println("Installing Windsurf local rules-for-ai file...")
+			case "global":
+				installType = installer.Global
+				fmt.Println("Installing Windsurf global rules-for-ai file...")
+			default:
+				installType = installer.All
+				fmt.Println("Installing all Windsurf rules-for-ai files...")
+			}
+
+			// Perform installation
+			err = windsurfInstaller.Install(installType)
+			if err != nil {
+				fmt.Printf("Error during installation: %v\n", err)
+				return
+			}
+
+			fmt.Printf("%s rules-for-ai file installation completed\n", installTypeFlag)
 		},
 	}
 
 	// Add flags
-	cmd.Flags().BoolVarP(&localOnly, "local", "l", false, "Install only local rules-for-ai file")
-	cmd.Flags().BoolVarP(&globalOnly, "global", "g", false, "Install only global rules-for-ai file")
-
-	// Make flags mutually exclusive
-	cmd.MarkFlagsMutuallyExclusive("local", "global")
+	cmd.Flags().StringVarP(&installTypeFlag, "type", "t", "all", "Installation type: 'local', 'global', or 'all' (default)")
+	cmd.Flags().StringVarP(&languageFlag, "language", "l", "en", "Template language: 'ja' or 'en' (default)")
 
 	return cmd
 }
