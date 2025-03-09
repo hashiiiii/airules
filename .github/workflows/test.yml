@@ -19,7 +19,7 @@ jobs:
     - name: Get Go version from Makefile
       id: go-version
       run: |
-        GO_VERSION=$(grep -oP 'GO_VERSION\s*:=\s*\$\(shell go version \| cut -d \' \' -f 3 \| sed \'s/go//\'\)' Makefile | head -1)
+        GO_VERSION=$(grep -oP "GO_VERSION\s*:=\s*\$\(shell go version \| cut -d \' \' -f 3 \| sed \'s/go//\'\)" Makefile | head -1)
         if [ -z "$GO_VERSION" ]; then
           echo "Failed to extract Go version from Makefile"
           exit 1
