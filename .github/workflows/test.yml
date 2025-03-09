@@ -15,39 +15,39 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Get Go version from Makefile
+    - uses: jdx/mise-action@v2
+      with:
+        version: latest
+        install: true
+        cache: true
+    - name: Get Go version
       id: go-version
       run: |
-        GO_VERSION=$(grep -oP "GO_VERSION\s*:=\s*\$\(shell go version \| cut -d \' \' -f 3 \| sed \'s/go//\'\)" Makefile | head -1)
-        if [ -z "$GO_VERSION" ]; then
-          echo "Failed to extract Go version from Makefile"
-          exit 1
-        fi
+        GO_VERSION=$(shell go version | cut -d ' ' -f 3 | sed 's/go//')
         echo "go_version=$GO_VERSION" >> $GITHUB_OUTPUT
       shell: bash
-    
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
         go-version: ${{ steps.go-version.outputs.go_version }}
-        
+
     - name: Test
       run: go test -v ./pkg/...
-      
+
     - name: Generate coverage report (Unix)
       if: matrix.os != 'windows-latest'
       run: |
         go test -coverprofile=coverage.out ./pkg/...
         go tool cover -func=coverage.out
-      
+
     - name: Generate coverage report (Windows)
       if: matrix.os == 'windows-latest'
       run: |
         go test -coverprofile=coverage.out ./pkg/...
         go tool cover -func=coverage.out
       shell: bash
-      
+
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
       with:
