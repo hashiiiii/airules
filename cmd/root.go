@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hashiiiii/airules/pkg/version"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +37,9 @@ func newVersionCmd() *cobra.Command {
 		Short: "Display version information",
 		Long:  "Display version information for airules",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("airules v0.1.0")
+			fmt.Printf("Version: %s\n", version.Version)
+			fmt.Printf("Commit: %s\n", version.Commit)
+			fmt.Printf("BuildDate: %s\n", version.BuildDate)
 		},
 	}
 }

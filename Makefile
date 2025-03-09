@@ -2,6 +2,15 @@
 BINARY      := airules
 BUILD_DIR   := bin
 ENTRY_PATH  := main.go
+GO_VERSION  := $(shell go version | cut -d ' ' -f 3 | sed 's/go//')
+
+# Get version from git tags (format: v1.2.3)
+# If no tag exists, use 'unknown' as version
+GIT_TAG     := $(shell git tag -l "v[0-9]*" | sort -V | tail -n 1)
+VERSION     := $(if $(GIT_TAG),$(shell echo $(GIT_TAG) | sed 's/^v//'),unknown)
+COMMIT      ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+DATE        ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+LDFLAGS     := -ldflags "-X github.com/hashiiiii/airules/pkg/version.Version=$(VERSION) -X github.com/hashiiiii/airules/pkg/version.Commit=$(COMMIT) -X github.com/hashiiiii/airules/pkg/version.BuildDate=$(DATE)"
 GOPATH      := $(shell go env GOPATH)
 
 # Set default target to help
@@ -25,6 +34,10 @@ info: ## Display environment variables
 	@printf "  \033[36m%-16s\033[0m %s\n" "BINARY" "$(BINARY)"
 	@printf "  \033[36m%-16s\033[0m %s\n" "BUILD_DIR" "$(BUILD_DIR)"
 	@printf "  \033[36m%-16s\033[0m %s\n" "ENTRY_PATH" "$(ENTRY_PATH)"
+	@printf "  \033[36m%-16s\033[0m %s\n" "GO_VERSION" "$(GO_VERSION)"
+	@printf "  \033[36m%-16s\033[0m %s\n" "VERSION" "$(VERSION)"
+	@printf "  \033[36m%-16s\033[0m %s\n" "COMMIT" "$(COMMIT)"
+	@printf "  \033[36m%-16s\033[0m %s\n" "DATE" "$(DATE)"
 	@printf "  \033[36m%-16s\033[0m %s\n" "GOPATH" "$(GOPATH)"
 	@echo "-----------------------------------------------------------"
 
@@ -38,9 +51,12 @@ clean: ## Clean the build directory
 
 .PHONY: build
 build: ## Build the binary
-	@echo "Building $(BINARY)..."
+	@echo "Building $(BINARY) with Go $(GO_VERSION)..."
+	@echo "Version: $(VERSION)"
+	@echo "Commit: $(COMMIT)"
+	@echo "Date: $(DATE)"
 	@mkdir -p $(BUILD_DIR)
-	go build -o $(BUILD_DIR)/$(BINARY) $(ENTRY_PATH)
+	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY) $(ENTRY_PATH)
 
 .PHONY: deps
 deps: ## Update dependencies
