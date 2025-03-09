@@ -14,10 +14,21 @@ jobs:
         with:
           fetch-depth: 0
       
+      - name: Get Go version from Makefile
+        id: go-version
+        run: |
+          GO_VERSION=$(grep -oP 'GO_VERSION\s*:=\s*\$\(shell go version \| cut -d \' \' -f 3 \| sed \'s/go//\'\)' Makefile | head -1)
+          if [ -z "$GO_VERSION" ]; then
+            echo "Failed to extract Go version from Makefile"
+            exit 1
+          fi
+          echo "go_version=$GO_VERSION" >> $GITHUB_OUTPUT
+        shell: bash
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: ${{ steps.go-version.outputs.go_version }}
       
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v4
