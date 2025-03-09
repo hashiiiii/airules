@@ -1,4 +1,4 @@
-name: Go Tests
+name: Test
 
 on:
   push:
@@ -25,10 +25,18 @@ jobs:
     - name: Test
       run: go test -v ./pkg/...
       
-    - name: Generate coverage report
+    - name: Generate coverage report (Unix)
+      if: matrix.os != 'windows-latest'
       run: |
         go test -coverprofile=coverage.out ./pkg/...
         go tool cover -func=coverage.out
+      
+    - name: Generate coverage report (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        go test -coverprofile=coverage.out ./pkg/...
+        go tool cover -func=coverage.out
+      shell: bash
       
     - name: Upload coverage report
       uses: actions/upload-artifact@v3
