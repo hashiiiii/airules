@@ -1,78 +1,115 @@
 # airules
 
-`airules` is a CLI tool for installing configuration files for AI-powered editors like Windsurf and Cursor to appropriate locations.
+`airules` is a command-line tool for installing and managing rules-for-ai files for AI-powered editors like Cursor and Windsurf.
 
 ## Features
 
-- Install Windsurf configuration files
-- Install Cursor configuration files
-- Selective installation of local and global configuration files
+- Install local and global rules-for-ai files for Cursor and Windsurf editors
+- Install rule sets from remote repositories like awesome-cursorrules
+- Support for both English and Japanese templates
+- Interactive mode for selecting rule sets from remote repositories
 
 ## Installation
 
-### Using Go
+### Prerequisites
 
-```bash
-go install github.com/hashiiiii/airules@latest
-```
+- Go 1.24 or later
 
 ### Building from source
+
+1. Clone the repository:
 
 ```bash
 git clone https://github.com/hashiiiii/airules.git
 cd airules
-go build -o bin/airules ./cmd/airules
+```
+
+2. Build the project:
+
+```bash
+make build
+```
+
+3. (Optional) Install the binary to your PATH:
+
+```bash
+make install
 ```
 
 ## Usage
 
-### Basic commands
+### Installing Cursor rules
 
 ```bash
-# Install Windsurf configuration files (both local and global)
-airules windsurf
+# Install local Cursor rules
+airules cursor --type local
 
-# Install Cursor configuration files (both local and global)
-airules cursor
+# Install global Cursor rules
+airules cursor --type global
 
-# Install only Windsurf local configuration file
-airules windsurf -l
-# or
-airules windsurf --local
+# Install both local and global Cursor rules
+airules cursor --type all
 
-# Install only Cursor global configuration file
-airules cursor -g
-# or
-airules cursor --global
-
-# Display version information
-airules version
-
-# Display help
-airules -h
+# Install Japanese templates
+airules cursor --language ja
 ```
 
-## Configuration File Locations
+### Installing Windsurf rules
 
-### Windsurf
+```bash
+# Install local Windsurf rules
+airules windsurf --type local
 
-- Local configuration file: `cascade.local.json` in the current directory
-- Global configuration file:
-  - macOS/Linux: `~/.config/windsurf/cascade.global.json`
-  - Windows: `%APPDATA%\Windsurf\cascade.global.json`
+# Install global Windsurf rules
+airules windsurf --type global
 
-### Cursor
+# Install both local and global Windsurf rules
+airules windsurf --type all
 
-- Local configuration file: `prompt_library.local.json` in the current directory
-- Global configuration file:
-  - macOS: `~/Library/Application Support/Cursor/prompt_library.global.json`
-  - Linux: `~/.config/cursor/prompt_library.global.json`
-  - Windows: `%APPDATA%\Cursor\prompt_library.global.json`
+# Install Japanese templates
+airules windsurf --language ja
+```
 
-## Customizing Templates
+### Installing rule sets from remote repositories
 
-Template files are located in the `vendor/rules-for-ai` directory. You can customize the installed configurations by editing these files.
+```bash
+# List available rule sets
+airules remote --list
+
+# Install a specific rule set locally
+airules remote --install <rule-set-name> --type local
+
+# Install a specific rule set globally
+airules remote --install <rule-set-name> --type global
+
+# Interactive mode (no flags)
+airules remote
+```
+
+### Displaying version information
+
+```bash
+airules version
+```
+
+## Development
+
+### Running tests
+
+```bash
+make test
+```
+
+### Building for different platforms
+
+```bash
+make build-all
+```
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- [awesome-cursorrules](https://github.com/PatrickJS/awesome-cursorrules) - A collection of Cursor rules

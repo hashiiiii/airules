@@ -74,9 +74,23 @@ test-coverage: ## Run tests with coverage
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 
-
 .PHONY: lint
 lint: ## Run linter and fix issues
 	@echo "Running linter with auto-fix..."
 	gofmt -w -s .
 	golangci-lint run --fix ./...
+
+.PHONY: install
+install: build
+	@echo "Installing $(BINARY)..."
+	@cp $(BUILD_DIR)/$(BINARY) $(GOPATH)/bin/$(BINARY)
+
+.PHONY: build-all
+build-all: clean
+	@echo "Building for multiple platforms..."
+	@mkdir -p $(BUILD_DIR)
+	@GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY)-linux-amd64 $(ENTRY_PATH)
+	@GOOS=darwin GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY)-darwin-amd64 $(ENTRY_PATH)
+	@GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY)-darwin-arm64 $(ENTRY_PATH)
+	@GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY)-windows-amd64.exe $(ENTRY_PATH)
+	@echo "Done building for multiple platforms"

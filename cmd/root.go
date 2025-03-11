@@ -25,6 +25,8 @@ for AI-powered editors like Windsurf and Cursor to appropriate locations.`,
 
 	// Add subcommands
 	cmd.AddCommand(newWindsurfCmd())
+	cmd.AddCommand(newCursorCmd())
+	cmd.AddCommand(newRemoteCmd())
 	cmd.AddCommand(newVersionCmd())
 
 	return cmd

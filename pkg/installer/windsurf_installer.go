@@ -95,5 +95,22 @@ func (i *WindsurfInstaller) installCore(installType InstallType) error {
 		return fmt.Errorf("failed to create directory %s: %w", destDir, err)
 	}
 
-	return i.fs.CopyFile(srcPath, destPath)
+	// Check if the destination file already exists
+	if _, err := os.Stat(destPath); err == nil {
+		// Create a backup of the existing file
+		backupPath := destPath + ".backup"
+		if err := i.fs.CopyFile(destPath, backupPath); err != nil {
+			return fmt.Errorf("failed to create backup of existing file: %w", err)
+		}
+		fmt.Printf("Created backup of existing file at %s\n", backupPath)
+	}
+
+	if err := i.fs.CopyFile(srcPath, destPath); err != nil {
+		return fmt.Errorf("failed to copy template file: %w", err)
+	}
+
+	fmt.Printf("Installed %s Windsurf rules to %s\n",
+		installType.String(), destPath)
+
+	return nil
 }

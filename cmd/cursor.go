@@ -13,17 +13,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newWindsurfCmd returns the windsurf command
-func newWindsurfCmd() *cobra.Command {
+// newCursorCmd returns the cursor command
+func newCursorCmd() *cobra.Command {
 	var installTypeFlag string
 	var languageFlag string
 	var installFlag string
 	var listFlag bool
 
 	cmd := &cobra.Command{
-		Use:   "windsurf",
-		Short: "Install Windsurf rules-for-ai files",
-		Long:  "Install local and global rules-for-ai files for Windsurf",
+		Use:   "cursor",
+		Short: "Install Cursor rules-for-ai files",
+		Long:  "Install local and global rules-for-ai files for Cursor",
 		Run: func(cmd *cobra.Command, args []string) {
 			var lang installer.Language
 			switch languageFlag {
@@ -40,36 +40,36 @@ func newWindsurfCmd() *cobra.Command {
 			switch installTypeFlag {
 			case "local", "l":
 				installType = installer.Local
-				fmt.Println("Installing Windsurf local rules-for-ai file...")
+				fmt.Println("Installing Cursor local rules-for-ai file...")
 			case "global", "g":
 				installType = installer.Global
-				fmt.Println("Installing Windsurf global rules-for-ai file...")
+				fmt.Println("Installing Cursor global rules-for-ai file...")
 			default:
 				installType = installer.All
-				fmt.Println("Installing all Windsurf rules-for-ai files...")
+				fmt.Println("Installing all Cursor rules-for-ai files...")
 			}
 
 			// If list flag is set, list available rule sets
 			if listFlag {
-				listWindsurfRuleSets()
+				listCursorRuleSets()
 				return
 			}
 
 			// If install flag is set, install the specified rule set
 			if installFlag != "" {
-				installWindsurfRuleSet(installFlag, installType)
+				installCursorRuleSet(installFlag, installType)
 				return
 			}
 
 			// If no flags are set, show an interactive menu
 			if !listFlag && installFlag == "" {
 				// First try to install from remote repository
-				if installWindsurfFromRemote(installType) {
+				if installFromRemote(installType) {
 					return
 				}
 
 				// If remote installation fails or is cancelled, fall back to local templates
-				installWindsurfFromLocalTemplates(lang, installType)
+				installFromLocalTemplates(lang, installType)
 			}
 		},
 	}
@@ -83,17 +83,17 @@ func newWindsurfCmd() *cobra.Command {
 	return cmd
 }
 
-// installWindsurfFromLocalTemplates installs Windsurf rules from local templates
-func installWindsurfFromLocalTemplates(lang installer.Language, installType installer.InstallType) {
+// installFromLocalTemplates installs Cursor rules from local templates
+func installFromLocalTemplates(lang installer.Language, installType installer.InstallType) {
 	// Create installer instance
-	windsurfInstaller, err := installer.NewWindsurfInstaller(lang)
+	cursorInstaller, err := installer.NewCursorInstaller(lang)
 	if err != nil {
 		fmt.Printf("Error creating installer: %v\n", err)
 		return
 	}
 
 	// Perform installation
-	err = windsurfInstaller.Install(installType)
+	err = cursorInstaller.Install(installType)
 	if err != nil {
 		fmt.Printf("Error during installation: %v\n", err)
 		return
@@ -102,9 +102,9 @@ func installWindsurfFromLocalTemplates(lang installer.Language, installType inst
 	fmt.Printf("%s rules-for-ai file installation completed\n", installType.String())
 }
 
-// installWindsurfFromRemote attempts to install Windsurf rules from remote repository
+// installFromRemote attempts to install Cursor rules from remote repository
 // Returns true if installation was successful or explicitly cancelled
-func installWindsurfFromRemote(installType installer.InstallType) bool {
+func installFromRemote(installType installer.InstallType) bool {
 	// Create a context
 	ctx := context.Background()
 
@@ -123,29 +123,29 @@ func installWindsurfFromRemote(installType installer.InstallType) bool {
 		return false
 	}
 
-	// Filter for Windsurf rule sets
-	var windsurfRuleSets []remote.RuleSet
+	// Filter for Cursor rule sets
+	var cursorRuleSets []remote.RuleSet
 	for _, ruleSet := range ruleSets {
-		if strings.ToLower(ruleSet.Type) == "windsurf" {
-			windsurfRuleSets = append(windsurfRuleSets, ruleSet)
+		if strings.ToLower(ruleSet.Type) == "cursor" {
+			cursorRuleSets = append(cursorRuleSets, ruleSet)
 		}
 	}
 
-	if len(windsurfRuleSets) == 0 {
-		fmt.Println("No Windsurf rule sets found. Falling back to local templates...")
+	if len(cursorRuleSets) == 0 {
+		fmt.Println("No Cursor rule sets found. Falling back to local templates...")
 		return false
 	}
 
 	// Show an interactive menu
-	fmt.Println("Available Windsurf rule sets:")
+	fmt.Println("Available Cursor rule sets:")
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tNAME\tDESCRIPTION")
-	for i, ruleSet := range windsurfRuleSets {
+	for i, ruleSet := range cursorRuleSets {
 		// Get a shorter name by removing common suffixes
 		shortName := ruleSet.Name
-		shortName = strings.TrimSuffix(shortName, "-windsurfrules-prompt-file")
-		shortName = strings.TrimSuffix(shortName, "-windsurfrules-prompt")
-		shortName = strings.TrimSuffix(shortName, "-windsurfrules")
+		shortName = strings.TrimSuffix(shortName, "-cursorrules-prompt-file")
+		shortName = strings.TrimSuffix(shortName, "-cursorrules-prompt")
+		shortName = strings.TrimSuffix(shortName, "-cursorrules")
 
 		fmt.Fprintf(w, "%d\t%s\t%s\n", i+1, shortName, ruleSet.Description)
 	}
@@ -168,13 +168,13 @@ func installWindsurfFromRemote(installType installer.InstallType) bool {
 	}
 
 	// Check if the selection is valid
-	if selection <= 0 || selection > len(windsurfRuleSets) {
+	if selection <= 0 || selection > len(cursorRuleSets) {
 		fmt.Println("Installation cancelled")
 		return true
 	}
 
 	// Install the selected rule set
-	selectedRuleSet := windsurfRuleSets[selection-1]
+	selectedRuleSet := cursorRuleSets[selection-1]
 	fmt.Printf("Installing rule set %s...\n", selectedRuleSet.Name)
 	err = remoteInstaller.InstallRuleSet(ctx, selectedRuleSet, installType)
 	if err != nil {
@@ -187,8 +187,8 @@ func installWindsurfFromRemote(installType installer.InstallType) bool {
 	return true
 }
 
-// listWindsurfRuleSets lists available Windsurf rule sets
-func listWindsurfRuleSets() {
+// listCursorRuleSets lists available Cursor rule sets
+func listCursorRuleSets() {
 	// Create a context
 	ctx := context.Background()
 
@@ -199,38 +199,38 @@ func listWindsurfRuleSets() {
 	remoteInstaller := installer.NewRemoteInstaller(fetcher)
 
 	// Fetch available rule sets
-	fmt.Println("Listing available Windsurf rule sets...")
+	fmt.Println("Listing available Cursor rule sets...")
 	ruleSets, err := remoteInstaller.ListRuleSets(ctx)
 	if err != nil {
 		fmt.Printf("Error listing rule sets: %v\n", err)
 		return
 	}
 
-	// Filter for Windsurf rule sets
-	var windsurfRuleSets []remote.RuleSet
+	// Filter for Cursor rule sets
+	var cursorRuleSets []remote.RuleSet
 	for _, ruleSet := range ruleSets {
-		if strings.ToLower(ruleSet.Type) == "windsurf" {
-			windsurfRuleSets = append(windsurfRuleSets, ruleSet)
+		if strings.ToLower(ruleSet.Type) == "cursor" {
+			cursorRuleSets = append(cursorRuleSets, ruleSet)
 		}
 	}
 
 	// Print the rule sets in a table
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tNAME\tDESCRIPTION\tURL")
-	for i, ruleSet := range windsurfRuleSets {
+	for i, ruleSet := range cursorRuleSets {
 		// Get a shorter name by removing common suffixes
 		shortName := ruleSet.Name
-		shortName = strings.TrimSuffix(shortName, "-windsurfrules-prompt-file")
-		shortName = strings.TrimSuffix(shortName, "-windsurfrules-prompt")
-		shortName = strings.TrimSuffix(shortName, "-windsurfrules")
+		shortName = strings.TrimSuffix(shortName, "-cursorrules-prompt-file")
+		shortName = strings.TrimSuffix(shortName, "-cursorrules-prompt")
+		shortName = strings.TrimSuffix(shortName, "-cursorrules")
 
 		fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", i+1, shortName, ruleSet.Description, ruleSet.URL)
 	}
 	w.Flush()
 }
 
-// installWindsurfRuleSet installs a specific Windsurf rule set
-func installWindsurfRuleSet(nameOrID string, installType installer.InstallType) {
+// installCursorRuleSet installs a specific Cursor rule set
+func installCursorRuleSet(nameOrID string, installType installer.InstallType) {
 	// Create a context
 	ctx := context.Background()
 
@@ -250,22 +250,22 @@ func installWindsurfRuleSet(nameOrID string, installType installer.InstallType) 
 			return
 		}
 
-		// Filter for Windsurf rule sets
-		var windsurfRuleSets []remote.RuleSet
+		// Filter for Cursor rule sets
+		var cursorRuleSets []remote.RuleSet
 		for _, ruleSet := range ruleSets {
-			if strings.ToLower(ruleSet.Type) == "windsurf" {
-				windsurfRuleSets = append(windsurfRuleSets, ruleSet)
+			if strings.ToLower(ruleSet.Type) == "cursor" {
+				cursorRuleSets = append(cursorRuleSets, ruleSet)
 			}
 		}
 
 		// Check if the ID is valid
-		if id <= 0 || id > len(windsurfRuleSets) {
+		if id <= 0 || id > len(cursorRuleSets) {
 			fmt.Printf("Invalid rule set ID: %d\n", id)
 			return
 		}
 
 		// Install the rule set
-		selectedRuleSet := windsurfRuleSets[id-1]
+		selectedRuleSet := cursorRuleSets[id-1]
 		fmt.Printf("Installing rule set %s...\n", selectedRuleSet.Name)
 		err = remoteInstaller.InstallRuleSet(ctx, selectedRuleSet, installType)
 		if err != nil {
@@ -285,10 +285,10 @@ func installWindsurfRuleSet(nameOrID string, installType installer.InstallType) 
 		return
 	}
 
-	// Filter for Windsurf rule sets and find matches
+	// Filter for Cursor rule sets and find matches
 	var matchingRuleSets []remote.RuleSet
 	for _, ruleSet := range ruleSets {
-		if strings.ToLower(ruleSet.Type) != "windsurf" {
+		if strings.ToLower(ruleSet.Type) != "cursor" {
 			continue
 		}
 
