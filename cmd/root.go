@@ -20,6 +20,10 @@ for AI-powered editors like Windsurf and Cursor to appropriate locations.`,
 				fmt.Fprintf(os.Stderr, "Error displaying help: %v\n", err)
 			}
 		},
+
+		// Add custom error handling
+		SilenceErrors: true,
+		SilenceUsage:  true,
 	}
 
 	// Disable completion command
