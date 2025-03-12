@@ -24,289 +24,79 @@ func (m *MockFileSystem) CopyFile(src, dest string) error {
 	return args.Error(0)
 }
 
-func Test_InstallCore(t *testing.T) {
-	t.Parallel()
-
-	mockFS := new(MockFileSystem)
-
-	installer := &WindsurfInstaller{
-		templateDir:    "templates",
-		localDestDir:   "local",
-		localFileName:  ".windsurfrules",
-		globalDestDir:  "global",
-		globalFileName: "global_rules.md",
-		lang:           English,
-		fs:             mockFS,
+func (m *MockFileSystem) ReadFile(path string) ([]byte, error) {
+	args := m.Called(path)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
 	}
-
-	tests := []struct {
-		name string
-		args struct {
-			installType InstallType
-		}
-		setup struct {
-			mock func()
-		}
-		want struct {
-			err    bool
-			errMsg string
-		}
-	}{
-		{
-			name: "Successful local installation",
-			args: struct{ installType InstallType }{
-				installType: Local,
-			},
-			setup: struct{ mock func() }{
-				mock: func() {
-					mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("templates", "local", ".windsurfrules"), filepath.Join("local", ".windsurfrules")).Return(nil)
-				},
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    false,
-				errMsg: "",
-			},
-		},
-		{
-			name: "MkdirAll fails",
-			args: struct{ installType InstallType }{
-				installType: Local,
-			},
-			setup: struct{ mock func() }{
-				mock: func() {
-					mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(errors.New("mkdir failed"))
-				},
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    true,
-				errMsg: "failed to create directory",
-			},
-		},
-		{
-			name: "CopyFile fails",
-			args: struct{ installType InstallType }{
-				installType: Local,
-			},
-			setup: struct{ mock func() }{
-				mock: func() {
-					mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("templates", "local", ".windsurfrules"), filepath.Join("local", ".windsurfrules")).Return(errors.New("copy failed"))
-				},
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    true,
-				errMsg: "copy failed",
-			},
-		},
-		{
-			name: "Invalid installation type",
-			args: struct{ installType InstallType }{
-				installType: InstallType(999),
-			},
-			setup: struct{ mock func() }{
-				mock: func() {},
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    true,
-				errMsg: "unknown installation type",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockFS.ExpectedCalls = nil
-			tt.setup.mock()
-
-			err := installer.installCore(tt.args.installType)
-
-			if tt.want.err {
-				assert.Error(t, err)
-				if tt.want.errMsg != "" {
-					assert.Contains(t, err.Error(), tt.want.errMsg)
-				}
-			} else {
-				assert.NoError(t, err)
-				mockFS.AssertExpectations(t)
-			}
-		})
-	}
+	return args.Get(0).([]byte), args.Error(1)
 }
 
-func Test_Install(t *testing.T) {
+func (m *MockFileSystem) WriteFile(path string, data []byte, perm os.FileMode) error {
+	args := m.Called(path, data, perm)
+	return args.Error(0)
+}
+
+func TestWindsurfInstaller_InstallLocal(t *testing.T) {
 	t.Parallel()
 
 	mockFS := new(MockFileSystem)
 	installer := &WindsurfInstaller{
-		templateDir:    "templates",
 		localDestDir:   "local",
 		localFileName:  ".windsurfrules",
 		globalDestDir:  "global",
 		globalFileName: "global_rules.md",
-		lang:           English,
 		fs:             mockFS,
 	}
 
-	tests := []struct {
-		name string
-		args struct {
-			installType InstallType
-		}
-		setup struct {
-			mock func(*MockFileSystem)
-		}
-		want struct {
-			err    bool
-			errMsg string
-		}
-	}{
-		{
-			name: "Local installation",
-			args: struct{ installType InstallType }{
-				installType: Local,
-			},
-			setup: struct{ mock func(*MockFileSystem) }{
-				mock: func(mockFS *MockFileSystem) {
-					mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("templates", "local", ".windsurfrules"), filepath.Join("local", ".windsurfrules")).Return(nil)
-				},
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    false,
-				errMsg: "",
-			},
-		},
-		{
-			name: "Global installation",
-			args: struct{ installType InstallType }{
-				installType: Global,
-			},
-			setup: struct{ mock func(*MockFileSystem) }{
-				mock: func(mockFS *MockFileSystem) {
-					mockFS.On("MkdirAll", "global", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("templates", "global", "global_rules.md"), filepath.Join("global", "global_rules.md")).Return(nil)
-				},
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    false,
-				errMsg: "",
-			},
-		},
-		{
-			name: "All installation - success",
-			args: struct{ installType InstallType }{
-				installType: All,
-			},
-			setup: struct{ mock func(*MockFileSystem) }{
-				mock: func(mockFS *MockFileSystem) {
-					mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("templates", "local", ".windsurfrules"), filepath.Join("local", ".windsurfrules")).Return(nil)
-					mockFS.On("MkdirAll", "global", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("templates", "global", "global_rules.md"), filepath.Join("global", "global_rules.md")).Return(nil)
-				},
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    false,
-				errMsg: "",
-			},
-		},
-		{
-			name: "All installation - local fails",
-			args: struct{ installType InstallType }{
-				installType: All,
-			},
-			setup: struct{ mock func(*MockFileSystem) }{
-				mock: func(mockFS *MockFileSystem) {
-					mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(errors.New("mkdir failed"))
-				},
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    true,
-				errMsg: "failed to install local configuration file",
-			},
-		},
-		{
-			name: "All installation - global fails",
-			args: struct{ installType InstallType }{
-				installType: All,
-			},
-			setup: struct{ mock func(*MockFileSystem) }{
-				mock: func(mockFS *MockFileSystem) {
-					mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("templates", "local", ".windsurfrules"), filepath.Join("local", ".windsurfrules")).Return(nil)
-					mockFS.On("MkdirAll", "global", os.FileMode(0755)).Return(nil)
-					mockFS.On("CopyFile", filepath.Join("templates", "global", "global_rules.md"), filepath.Join("global", "global_rules.md")).Return(errors.New("copy failed"))
-				},
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    true,
-				errMsg: "failed to install global configuration file",
-			},
-		},
-		{
-			name: "Invalid installation type",
-			args: struct{ installType InstallType }{
-				installType: InstallType(999),
-			},
-			setup: struct{ mock func(*MockFileSystem) }{
-				mock: func(*MockFileSystem) {},
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    true,
-				errMsg: "unknown installation type",
-			},
-		},
-	}
+	// テストデータ
+	rulePaths := []string{"path/to/rule1.md", "path/to/rule2.md"}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockFS.ExpectedCalls = nil
-			tt.setup.mock(mockFS)
+	// 成功ケース
+	t.Run("Success", func(t *testing.T) {
+		mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(nil)
+		mockFS.On("ReadFile", "path/to/rule1.md").Return([]byte("rule1 content"), nil)
+		mockFS.On("ReadFile", "path/to/rule2.md").Return([]byte("rule2 content"), nil)
+		mockFS.On("WriteFile", filepath.Join("local", ".windsurfrules"), mock.Anything, os.FileMode(0644)).Return(nil)
 
-			err := installer.Install(tt.args.installType)
+		err := installer.installLocal(rulePaths)
+		assert.NoError(t, err)
+		mockFS.AssertExpectations(t)
+	})
 
-			if tt.want.err {
-				assert.Error(t, err)
-				if tt.want.errMsg != "" {
-					assert.Contains(t, err.Error(), tt.want.errMsg)
-				}
-			} else {
-				assert.NoError(t, err)
-				mockFS.AssertExpectations(t)
-			}
-		})
-	}
+	// MkdirAll失敗ケース
+	t.Run("MkdirAll fails", func(t *testing.T) {
+		mockFS.ExpectedCalls = nil
+		mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(errors.New("mkdir failed"))
+
+		err := installer.installLocal(rulePaths)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to create directory")
+	})
+
+	// ReadFile失敗ケース
+	t.Run("ReadFile fails", func(t *testing.T) {
+		mockFS.ExpectedCalls = nil
+		mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(nil)
+		mockFS.On("ReadFile", "path/to/rule1.md").Return(nil, errors.New("read failed"))
+
+		err := installer.installLocal(rulePaths)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to read rule file")
+	})
+
+	// WriteFile失敗ケース
+	t.Run("WriteFile fails", func(t *testing.T) {
+		mockFS.ExpectedCalls = nil
+		mockFS.On("MkdirAll", "local", os.FileMode(0755)).Return(nil)
+		mockFS.On("ReadFile", "path/to/rule1.md").Return([]byte("rule1 content"), nil)
+		mockFS.On("ReadFile", "path/to/rule2.md").Return([]byte("rule2 content"), nil)
+		mockFS.On("WriteFile", filepath.Join("local", ".windsurfrules"), mock.Anything, os.FileMode(0644)).Return(errors.New("write failed"))
+
+		err := installer.installLocal(rulePaths)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to write to")
+	})
 }
 
 func Test_NewWindsurfInstaller(t *testing.T) {
@@ -314,77 +104,26 @@ func Test_NewWindsurfInstaller(t *testing.T) {
 
 	tests := []struct {
 		name string
-		args struct {
-			templateDir string
-			lang        Language
-		}
 		want struct {
 			err    bool
 			errMsg string
 		}
 	}{
 		{
-			name: "Valid template directory - English",
-			args: struct {
-				templateDir string
-				lang        Language
-			}{
-				templateDir: filepath.Join("valid", "template", "dir"),
-				lang:        English,
-			},
+			name: "Valid installer creation",
 			want: struct {
 				err    bool
 				errMsg string
 			}{
 				err:    false,
 				errMsg: "",
-			},
-		},
-		{
-			name: "Valid template directory - Japanese",
-			args: struct {
-				templateDir string
-				lang        Language
-			}{
-				templateDir: filepath.Join("valid", "template", "dir"),
-				lang:        Japanese,
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    false,
-				errMsg: "",
-			},
-		},
-		{
-			name: "Empty template directory",
-			args: struct {
-				templateDir string
-				lang        Language
-			}{
-				templateDir: "",
-				lang:        English,
-			},
-			want: struct {
-				err    bool
-				errMsg string
-			}{
-				err:    true,
-				errMsg: "TEMPLATE_DIR environment variable is not set",
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalValue := os.Getenv("TEMPLATE_DIR")
-			os.Setenv("TEMPLATE_DIR", tt.args.templateDir)
-			defer func() {
-				os.Setenv("TEMPLATE_DIR", originalValue)
-			}()
-
-			installer, err := NewWindsurfInstaller(tt.args.lang)
+			installer, err := NewWindsurfInstaller()
 
 			if tt.want.err {
 				assert.Error(t, err)
@@ -394,12 +133,10 @@ func Test_NewWindsurfInstaller(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, installer)
-				assert.Equal(t, tt.args.templateDir, installer.templateDir)
 				assert.Equal(t, ".", installer.localDestDir)
 				assert.Equal(t, ".windsurfrules", installer.localFileName)
 				assert.Contains(t, installer.globalDestDir, filepath.Join(".codeium", "windsurf", "memories"))
 				assert.Equal(t, "global_rules.md", installer.globalFileName)
-				assert.Equal(t, tt.args.lang, installer.lang)
 				assert.IsType(t, &DefaultFileSystem{}, installer.fs)
 			}
 		})

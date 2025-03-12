@@ -7,39 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Language_String(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name string
-		lang Language
-		want string
-	}{
-		{
-			name: "English language",
-			lang: English,
-			want: "en",
-		},
-		{
-			name: "Japanese language",
-			lang: Japanese,
-			want: "ja",
-		},
-		{
-			name: "Unknown language",
-			lang: Language(999),
-			want: "unknown",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.lang.String()
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
 func Test_GetInstallPath(t *testing.T) {
 	t.Parallel()
 
@@ -48,7 +15,6 @@ func Test_GetInstallPath(t *testing.T) {
 	globalDestDir := "globalDest"
 	localFileName := ".windsurfrules"
 	globalFileName := "global_rules.md"
-	lang := English
 
 	tests := []struct {
 		name string
@@ -63,8 +29,10 @@ func Test_GetInstallPath(t *testing.T) {
 		}
 	}{
 		{
-			name: "Local installation type",
-			args: struct{ installType InstallType }{
+			name: "Local installation",
+			args: struct {
+				installType InstallType
+			}{
 				installType: Local,
 			},
 			want: struct {
@@ -73,15 +41,17 @@ func Test_GetInstallPath(t *testing.T) {
 				destDir  string
 				err      bool
 			}{
-				srcPath:  filepath.Join("templates", "local", ".windsurfrules"),
-				destPath: filepath.Join("localDest", ".windsurfrules"),
-				destDir:  "localDest",
+				srcPath:  filepath.Join(templateDir, "local", localFileName),
+				destPath: filepath.Join(localDestDir, localFileName),
+				destDir:  localDestDir,
 				err:      false,
 			},
 		},
 		{
-			name: "Global installation type",
-			args: struct{ installType InstallType }{
+			name: "Global installation",
+			args: struct {
+				installType InstallType
+			}{
 				installType: Global,
 			},
 			want: struct {
@@ -90,15 +60,17 @@ func Test_GetInstallPath(t *testing.T) {
 				destDir  string
 				err      bool
 			}{
-				srcPath:  filepath.Join("templates", "global", "global_rules.md"),
-				destPath: filepath.Join("globalDest", "global_rules.md"),
-				destDir:  "globalDest",
+				srcPath:  filepath.Join(templateDir, "global", globalFileName),
+				destPath: filepath.Join(globalDestDir, globalFileName),
+				destDir:  globalDestDir,
 				err:      false,
 			},
 		},
 		{
-			name: "Invalid installation type",
-			args: struct{ installType InstallType }{
+			name: "Unknown installation type",
+			args: struct {
+				installType InstallType
+			}{
 				installType: InstallType(999),
 			},
 			want: struct {
@@ -117,15 +89,7 @@ func Test_GetInstallPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			srcPath, destPath, destDir, err := GetInstallPath(
-				tt.args.installType,
-				templateDir,
-				localDestDir,
-				globalDestDir,
-				localFileName,
-				globalFileName,
-				lang,
-			)
+			srcPath, destPath, destDir, err := GetInstallPath(tt.args.installType, templateDir, localDestDir, globalDestDir, localFileName, globalFileName)
 
 			if tt.want.err {
 				assert.Error(t, err)

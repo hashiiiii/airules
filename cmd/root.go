@@ -31,6 +31,8 @@ func NewRootCmd() *cobra.Command {
 	// Add subcommands
 	cmd.AddCommand(newWindsurfCmd())
 	cmd.AddCommand(newVersionCmd())
+	cmd.AddCommand(newRulesCmd())
+	cmd.AddCommand(newInitCmd())
 
 	return cmd
 }

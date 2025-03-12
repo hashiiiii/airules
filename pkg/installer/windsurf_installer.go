@@ -5,13 +5,17 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
+	"github.com/hashiiiii/airules/pkg/config"
 	"github.com/mitchellh/go-homedir"
 )
 
 type FileSystem interface {
 	MkdirAll(path string, perm os.FileMode) error
 	CopyFile(src, dest string) error
+	ReadFile(path string) ([]byte, error)
+	WriteFile(path string, data []byte, perm os.FileMode) error
 }
 
 type DefaultFileSystem struct{}
@@ -24,25 +28,26 @@ func (fs *DefaultFileSystem) CopyFile(src, dest string) error {
 	return CopyFile(src, dest)
 }
 
+func (fs *DefaultFileSystem) ReadFile(path string) ([]byte, error) {
+	return os.ReadFile(path)
+}
+
+func (fs *DefaultFileSystem) WriteFile(path string, data []byte, perm os.FileMode) error {
+	return os.WriteFile(path, data, perm)
+}
+
 type WindsurfInstaller struct {
-	templateDir    string
 	localDestDir   string
 	globalDestDir  string
 	localFileName  string
 	globalFileName string
-	lang           Language
 	fs             FileSystem
 }
 
-func NewWindsurfInstaller(lang Language) (*WindsurfInstaller, error) {
+func NewWindsurfInstaller() (*WindsurfInstaller, error) {
 	home, err := homedir.Dir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	templateDir := os.Getenv("TEMPLATE_DIR")
-	if templateDir == "" {
-		return nil, fmt.Errorf("failed to get template directory: TEMPLATE_DIR environment variable is not set")
 	}
 
 	var localDestDir, globalDestDir string
@@ -56,44 +61,103 @@ func NewWindsurfInstaller(lang Language) (*WindsurfInstaller, error) {
 	}
 
 	return &WindsurfInstaller{
-		templateDir:    templateDir,
 		localDestDir:   localDestDir,
 		globalDestDir:  globalDestDir,
 		localFileName:  ".windsurfrules",
 		globalFileName: "global_rules.md",
-		lang:           lang,
 		fs:             &DefaultFileSystem{},
 	}, nil
 }
 
+// Install installs rules based on the specified key
 func (i *WindsurfInstaller) Install(installType InstallType) error {
-	switch installType {
-	case Local, Global:
-		return i.installCore(installType)
-	case All:
-		if err := i.installCore(Local); err != nil {
-			return fmt.Errorf("failed to install local configuration file: %w", err)
-		}
-
-		if err := i.installCore(Global); err != nil {
-			return fmt.Errorf("failed to install global configuration file: %w", err)
-		}
-
-		return nil
-	default:
-		return fmt.Errorf("unknown installation type: %v", installType)
-	}
+	return i.InstallWithKey(installType, "default")
 }
 
-func (i *WindsurfInstaller) installCore(installType InstallType) error {
-	srcPath, destPath, destDir, err := GetInstallPath(installType, i.templateDir, i.localDestDir, i.globalDestDir, i.localFileName, i.globalFileName, i.lang)
-	if err != nil {
-		return err
+// InstallWithKey installs rules based on the specified key
+func (i *WindsurfInstaller) InstallWithKey(installType InstallType, key string) error {
+	// Ensure config directory exists
+	if _, err := config.EnsureConfigDir(); err != nil {
+		return fmt.Errorf("failed to ensure config directory: %w", err)
 	}
+
+	// Get rule file paths for the key
+	rulePaths, err := config.GetRuleFilePaths(key)
+	if err != nil {
+		return fmt.Errorf("failed to get rule file paths: %w", err)
+	}
+
+	// Check if rule files exist
+	for _, path := range rulePaths {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			return fmt.Errorf("rule file '%s' not found", path)
+		}
+	}
+
+	// Install based on type
+	switch installType {
+	case Local:
+		err = i.installLocal(rulePaths)
+	case Global:
+		err = i.installGlobal(rulePaths)
+	case All:
+		if err = i.installLocal(rulePaths); err != nil {
+			return err
+		}
+		err = i.installGlobal(rulePaths)
+	default:
+		return fmt.Errorf("unknown install type: %v", installType)
+	}
+
+	return err
+}
+
+// installLocal installs local rules using the specified rule files
+func (i *WindsurfInstaller) installLocal(rulePaths []string) error {
+	destPath := filepath.Join(i.localDestDir, i.localFileName)
+	destDir := filepath.Dir(destPath)
 
 	if err := i.fs.MkdirAll(destDir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", destDir, err)
 	}
 
-	return i.fs.CopyFile(srcPath, destPath)
+	return i.combineAndWriteRules(rulePaths, destPath)
+}
+
+// installGlobal installs global rules using the specified rule files
+func (i *WindsurfInstaller) installGlobal(rulePaths []string) error {
+	destPath := filepath.Join(i.globalDestDir, i.globalFileName)
+	destDir := filepath.Dir(destPath)
+
+	if err := i.fs.MkdirAll(destDir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", destDir, err)
+	}
+
+	return i.combineAndWriteRules(rulePaths, destPath)
+}
+
+// combineAndWriteRules combines multiple rule files and writes them to the destination
+func (i *WindsurfInstaller) combineAndWriteRules(rulePaths []string, destPath string) error {
+	var combinedContent strings.Builder
+
+	for _, path := range rulePaths {
+		content, err := i.fs.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("failed to read rule file '%s': %w", path, err)
+		}
+
+		// Add file content with a separator
+		if combinedContent.Len() > 0 {
+			combinedContent.WriteString("\n\n")
+		}
+		combinedContent.WriteString(fmt.Sprintf("// From %s\n", filepath.Base(path)))
+		combinedContent.Write(content)
+	}
+
+	// Write combined content to destination
+	if err := i.fs.WriteFile(destPath, []byte(combinedContent.String()), 0644); err != nil {
+		return fmt.Errorf("failed to write to '%s': %w", destPath, err)
+	}
+
+	return nil
 }

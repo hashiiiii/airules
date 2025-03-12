@@ -19,16 +19,6 @@ const (
 	All
 )
 
-// Language represents the language of the template file
-type Language int
-
-const (
-	// English represents English language
-	English Language = iota
-	// Japanese represents Japanese language
-	Japanese
-)
-
 // String returns the string representation of InstallType
 func (t InstallType) String() string {
 	switch t {
@@ -38,18 +28,6 @@ func (t InstallType) String() string {
 		return "global"
 	case All:
 		return "all"
-	default:
-		return "unknown"
-	}
-}
-
-// String returns the string representation of Language
-func (l Language) String() string {
-	switch l {
-	case English:
-		return "en"
-	case Japanese:
-		return "ja"
 	default:
 		return "unknown"
 	}
@@ -103,29 +81,17 @@ func CopyFile(src, dest string) error {
 	return nil
 }
 
-func GetInstallPath(installType InstallType, templateDir, localDestDir, globalDestDir, localFileName, globalFileName string, lang Language) (srcPath, destPath, destDir string, err error) {
+func GetInstallPath(installType InstallType, templateDir, localDestDir, globalDestDir, localFileName, globalFileName string) (srcPath, destPath, destDir string, err error) {
 	switch installType {
 	case Local:
 		destDir = localDestDir
 		fileName := localFileName
-
-		templateFileName := fileName
-		if lang == Japanese {
-			templateFileName = fileName + "_JA"
-		}
-
-		srcPath = filepath.Join(templateDir, "local", templateFileName)
+		srcPath = filepath.Join(templateDir, "local", fileName)
 		destPath = filepath.Join(destDir, fileName)
 	case Global:
 		destDir = globalDestDir
 		fileName := globalFileName
-
-		templateFileName := fileName
-		if lang == Japanese {
-			templateFileName = fileName + "_JA"
-		}
-
-		srcPath = filepath.Join(templateDir, "global", templateFileName)
+		srcPath = filepath.Join(templateDir, "global", fileName)
 		destPath = filepath.Join(destDir, fileName)
 	default:
 		return "", "", "", fmt.Errorf("unknown installation type: %v", installType)
