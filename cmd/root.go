@@ -12,8 +12,7 @@ func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "airules",
 		Short: "AI Editor rules Installer",
-		Long: `airules is a tool for installing rules-for-ai files
-for AI-powered editors like Windsurf and Cursor to appropriate locations.`,
+		Long:  "airules is a tool for installing rules-for-ai files for AI-powered editors like Windsurf and Cursor to appropriate locations.",
 		Run: func(cmd *cobra.Command, args []string) {
 			// Display help if no flags specified
 			if err := cmd.Help(); err != nil {
@@ -35,5 +34,3 @@ for AI-powered editors like Windsurf and Cursor to appropriate locations.`,
 
 	return cmd
 }
-
-// newVersionCmd returns a command that displays version information
