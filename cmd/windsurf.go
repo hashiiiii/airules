@@ -60,8 +60,8 @@ func newWindsurfCmd() *cobra.Command {
 	}
 
 	// Add flags
-	cmd.Flags().StringVarP(&installTypeFlag, "type", "t", "all", "Installation type: 'local', 'global', or 'all' (default)")
-	cmd.Flags().StringVarP(&languageFlag, "language", "l", "en", "Template language: 'ja' or 'en' (default)")
+	cmd.Flags().StringVarP(&installTypeFlag, "type", "t", "all", "Installation type: 'local', 'global', or 'all'")
+	cmd.Flags().StringVarP(&languageFlag, "language", "l", "en", "Template language: 'ja' or 'en'")
 
 	return cmd
 }
