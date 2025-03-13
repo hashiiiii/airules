@@ -12,19 +12,38 @@ import (
 // Config represents the application configuration
 type Config struct {
 	Windsurf WindsurfConfig `toml:"windsurf"`
+	Cursor   CursorConfig   `toml:"cursor"`
 }
 
 // WindsurfConfig represents Windsurf-specific configuration
 type WindsurfConfig struct {
-	Keys map[string][]string `toml:"keys"`
+	Local  map[string][]string `toml:"local"`
+	Global map[string][]string `toml:"global"`
 }
 
-// DefaultConfig returns the default configuration
-func DefaultConfig() *Config {
+// CursorConfig represents Cursor-specific configuration
+type CursorConfig struct {
+	Local  map[string][]string `toml:"local"`
+	Global map[string][]string `toml:"global"`
+}
+
+// GetDefaultConfig returns the default configuration
+func GetDefaultConfig() *Config {
 	return &Config{
 		Windsurf: WindsurfConfig{
-			Keys: map[string][]string{
-				"default": {".windsurfrules"},
+			Local: map[string][]string{
+				"default": {"templates/windsurf/local/.windsurfrules"},
+			},
+			Global: map[string][]string{
+				"default": {"templates/windsurf/global/global_rules.md"},
+			},
+		},
+		Cursor: CursorConfig{
+			Local: map[string][]string{
+				"default": {"templates/cursor/local/project_rules.mdc"},
+			},
+			Global: map[string][]string{
+				"default": {"templates/cursor/global/global_rules.mdc"},
 			},
 		},
 	}
@@ -48,7 +67,7 @@ func EnsureConfigDir() (string, error) {
 	}
 
 	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create config directory: %w", err)
+		return "", fmt.Errorf("Failed to create config directory: %w", err)
 	}
 
 	return configDir, nil
@@ -65,7 +84,7 @@ func LoadConfig() (*Config, error) {
 
 	// If config file doesn't exist, create default
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		config := DefaultConfig()
+		config := GetDefaultConfig()
 		if err := SaveConfig(config); err != nil {
 			return nil, err
 		}
@@ -102,17 +121,42 @@ func SaveConfig(config *Config) error {
 	return encoder.Encode(config)
 }
 
-// GetRuleFilePaths returns the paths to rule files by key
-func GetRuleFilePaths(key string) ([]string, error) {
+// GetRuleFilePaths returns the paths to rule files by editor, mode and key
+func GetRuleFilePaths(editor, mode, key string) ([]string, error) {
 	config, err := LoadConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	// Get rule file names from config
-	ruleFiles, ok := config.Windsurf.Keys[key]
+	var ruleFiles []string
+	var ok bool
+
+	// Get rule file names from config based on editor and mode
+	switch editor {
+	case "windsurf":
+		switch mode {
+		case "local":
+			ruleFiles, ok = config.Windsurf.Local[key]
+		case "global":
+			ruleFiles, ok = config.Windsurf.Global[key]
+		default:
+			return nil, fmt.Errorf("invalid mode '%s' for windsurf", mode)
+		}
+	case "cursor":
+		switch mode {
+		case "local":
+			ruleFiles, ok = config.Cursor.Local[key]
+		case "global":
+			ruleFiles, ok = config.Cursor.Global[key]
+		default:
+			return nil, fmt.Errorf("invalid mode '%s' for cursor", mode)
+		}
+	default:
+		return nil, fmt.Errorf("invalid editor '%s'", editor)
+	}
+
 	if !ok {
-		return nil, fmt.Errorf("rule key '%s' not found", key)
+		return nil, fmt.Errorf("rule key '%s' not found for %s %s", key, editor, mode)
 	}
 
 	// Get config directory

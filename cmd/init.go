@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/hashiiiii/airules/pkg/config"
+	"github.com/otiai10/copy"
 	"github.com/spf13/cobra"
 )
 
@@ -18,37 +20,61 @@ func newInitCmd() *cobra.Command {
 			// Get config directory
 			configDir, err := config.GetConfigDir()
 			if err != nil {
-				fmt.Printf("Error getting config directory: %v\n", err)
+				fmt.Printf("Failed to get config directory: %v\n", err)
 				return
 			}
 
 			// Create config directory if it doesn't exist
 			if err := os.MkdirAll(configDir, 0755); err != nil {
-				fmt.Printf("Error creating config directory: %v\n", err)
+				fmt.Printf("Failed to create config directory: %v\n", err)
 				return
 			}
 
-			// Create default config file
-			cfg := config.DefaultConfig()
-			if err := config.SaveConfig(cfg); err != nil {
-				fmt.Printf("Error saving default config: %v\n", err)
+			// Get repository root directory
+			_, filename, _, ok := runtime.Caller(0)
+			if !ok {
+				fmt.Println("Failed to get current file path")
 				return
 			}
 
-			// Create default rule file
-			defaultRuleFile := filepath.Join(configDir, ".windsurfrules")
-			if _, err := os.Stat(defaultRuleFile); os.IsNotExist(err) {
-				// Create with default content
-				defaultContent := "// Default rules-for-ai file\n// Add your rules here\n"
-				if err := os.WriteFile(defaultRuleFile, []byte(defaultContent), 0644); err != nil {
-					fmt.Printf("Error creating default rule file: %v\n", err)
+			// Go up two directories from cmd/init.go to reach repository root
+			repoRoot := filepath.Dir(filepath.Dir(filename))
+
+			// Source templates directory (in repository root)
+			srcTemplatesDir := filepath.Join(repoRoot, "templates")
+
+			// Check if templates directory exists
+			if _, err := os.Stat(srcTemplatesDir); os.IsNotExist(err) {
+				fmt.Printf("'templates' directory not found at %s\n", srcTemplatesDir)
+				return
+			}
+
+			// Destination templates directory
+			destTemplatesDir := filepath.Join(configDir, "templates")
+
+			// Copy templates
+			fmt.Printf("Copying templates from %s to %s\n", srcTemplatesDir, destTemplatesDir)
+			if err := copy.Copy(srcTemplatesDir, destTemplatesDir); err != nil {
+				fmt.Printf("Failed to copy templates: %v\n", err)
+				return
+			}
+			fmt.Println("Templates copied successfully.")
+
+			// Create or update config file
+			configFile := filepath.Join(configDir, "config.toml")
+			if _, err := os.Stat(configFile); os.IsNotExist(err) {
+				// Create default config with settings for both editors and modes
+				cfg := config.GetDefaultConfig()
+				if err := config.SaveConfig(cfg); err != nil {
+					fmt.Printf("Failed to save default config: %v\n", err)
 					return
 				}
+				fmt.Println("Created configuration file with default settings.")
+			} else {
+				fmt.Println("Configuration file already exists, not overwriting.")
+				fmt.Println("If you want to see the current configuration, check the file at:")
+				fmt.Println(configFile)
 			}
-
-			fmt.Printf("Initialized airules configuration in %s\n", configDir)
-			fmt.Println("Default key 'default' created with file '.windsurfrules'")
-			fmt.Println("Use 'airules rules add' to add more files to keys")
 		},
 	}
 

@@ -82,7 +82,33 @@ func (i *WindsurfInstaller) InstallWithKey(installType InstallType, key string) 
 	}
 
 	// Get rule file paths for the key
-	rulePaths, err := config.GetRuleFilePaths(key)
+	var rulePaths []string
+	var err error
+
+	// Get rule file paths based on installation type
+	switch installType {
+	case Local:
+		rulePaths, err = config.GetRuleFilePaths("windsurf", "local", key)
+	case Global:
+		rulePaths, err = config.GetRuleFilePaths("windsurf", "global", key)
+	case All:
+		// For "all", we'll combine both local and global rules
+		localRulePaths, localErr := config.GetRuleFilePaths("windsurf", "local", key)
+		if localErr != nil {
+			return fmt.Errorf("failed to get local rule file paths: %w", localErr)
+		}
+
+		globalRulePaths, globalErr := config.GetRuleFilePaths("windsurf", "global", key)
+		if globalErr != nil {
+			return fmt.Errorf("failed to get global rule file paths: %w", globalErr)
+		}
+
+		rulePaths = append(localRulePaths, globalRulePaths...)
+		err = nil
+	default:
+		return fmt.Errorf("unknown install type: %v", installType)
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to get rule file paths: %w", err)
 	}

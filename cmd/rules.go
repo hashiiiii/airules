@@ -14,6 +14,7 @@ func newRulesCmd() *cobra.Command {
 	var addFlag bool
 	var removeFlag bool
 	var removeAllFlag bool
+	var modeFlag string
 
 	cmd := &cobra.Command{
 		Use:   "rules",
@@ -43,6 +44,12 @@ func newRulesCmd() *cobra.Command {
 				listFlag = true
 			}
 
+			// Validate mode flag
+			if modeFlag != "local" && modeFlag != "global" {
+				fmt.Printf("Error: Invalid mode '%s'. Must be 'local' or 'global'\n", modeFlag)
+				return
+			}
+
 			// Load configuration
 			cfg, err := config.LoadConfig()
 			if err != nil {
@@ -50,10 +57,18 @@ func newRulesCmd() *cobra.Command {
 				return
 			}
 
+			// Get the appropriate map based on mode
+			var rulesMap map[string][]string
+			if modeFlag == "local" {
+				rulesMap = cfg.Windsurf.Local
+			} else {
+				rulesMap = cfg.Windsurf.Global
+			}
+
 			// List operation
 			if listFlag {
-				fmt.Println("Available rule keys:")
-				for key, files := range cfg.Windsurf.Keys {
+				fmt.Printf("Available rule keys for windsurf %s mode:\n", modeFlag)
+				for key, files := range rulesMap {
 					fmt.Printf("  %s:\n", key)
 					for _, file := range files {
 						fmt.Printf("    - %s\n", file)
@@ -86,12 +101,12 @@ func newRulesCmd() *cobra.Command {
 				}
 
 				// Add file to key
-				if _, ok := cfg.Windsurf.Keys[key]; !ok {
-					cfg.Windsurf.Keys[key] = []string{}
+				if _, ok := rulesMap[key]; !ok {
+					rulesMap[key] = []string{}
 				}
 
 				// Check if file already exists in the key
-				for _, f := range cfg.Windsurf.Keys[key] {
+				for _, f := range rulesMap[key] {
 					if f == filePath {
 						fmt.Printf("File '%s' is already in key '%s'\n", filePath, key)
 						return
@@ -99,7 +114,14 @@ func newRulesCmd() *cobra.Command {
 				}
 
 				// Add file to key
-				cfg.Windsurf.Keys[key] = append(cfg.Windsurf.Keys[key], filePath)
+				rulesMap[key] = append(rulesMap[key], filePath)
+
+				// Update the config based on mode
+				if modeFlag == "local" {
+					cfg.Windsurf.Local = rulesMap
+				} else {
+					cfg.Windsurf.Global = rulesMap
+				}
 
 				// Save configuration
 				if err := config.SaveConfig(cfg); err != nil {
@@ -107,7 +129,7 @@ func newRulesCmd() *cobra.Command {
 					return
 				}
 
-				fmt.Printf("Added file '%s' to key '%s'\n", filePath, key)
+				fmt.Printf("Added file '%s' to key '%s' in %s mode\n", filePath, key, modeFlag)
 				return
 			}
 
@@ -121,14 +143,21 @@ func newRulesCmd() *cobra.Command {
 				key := args[0]
 
 				// Check if key exists
-				if _, ok := cfg.Windsurf.Keys[key]; !ok {
-					fmt.Printf("Key '%s' not found\n", key)
+				if _, ok := rulesMap[key]; !ok {
+					fmt.Printf("Key '%s' not found in %s mode\n", key, modeFlag)
 					return
 				}
 
 				// Remove entire key if --all flag is set or no file specified
 				if removeAllFlag || len(args) == 1 {
-					delete(cfg.Windsurf.Keys, key)
+					delete(rulesMap, key)
+
+					// Update the config based on mode
+					if modeFlag == "local" {
+						cfg.Windsurf.Local = rulesMap
+					} else {
+						cfg.Windsurf.Global = rulesMap
+					}
 
 					// Save configuration
 					if err := config.SaveConfig(cfg); err != nil {
@@ -136,7 +165,7 @@ func newRulesCmd() *cobra.Command {
 						return
 					}
 
-					fmt.Printf("Removed key '%s' and all its files\n", key)
+					fmt.Printf("Removed key '%s' and all its files from %s mode\n", key, modeFlag)
 					return
 				}
 
@@ -145,7 +174,7 @@ func newRulesCmd() *cobra.Command {
 				var newFiles []string
 				fileFound := false
 
-				for _, f := range cfg.Windsurf.Keys[key] {
+				for _, f := range rulesMap[key] {
 					if f != filePath {
 						newFiles = append(newFiles, f)
 					} else {
@@ -154,15 +183,22 @@ func newRulesCmd() *cobra.Command {
 				}
 
 				if !fileFound {
-					fmt.Printf("File '%s' not found in key '%s'\n", filePath, key)
+					fmt.Printf("File '%s' not found in key '%s' in %s mode\n", filePath, key, modeFlag)
 					return
 				}
 
 				// Update key with remaining files or delete if empty
 				if len(newFiles) > 0 {
-					cfg.Windsurf.Keys[key] = newFiles
+					rulesMap[key] = newFiles
 				} else {
-					delete(cfg.Windsurf.Keys, key)
+					delete(rulesMap, key)
+				}
+
+				// Update the config based on mode
+				if modeFlag == "local" {
+					cfg.Windsurf.Local = rulesMap
+				} else {
+					cfg.Windsurf.Global = rulesMap
 				}
 
 				// Save configuration
@@ -171,7 +207,7 @@ func newRulesCmd() *cobra.Command {
 					return
 				}
 
-				fmt.Printf("Removed file '%s' from key '%s'\n", filePath, key)
+				fmt.Printf("Removed file '%s' from key '%s' in %s mode\n", filePath, key, modeFlag)
 				return
 			}
 		},
@@ -182,6 +218,7 @@ func newRulesCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&addFlag, "add", "a", false, "Add a file to a rule key")
 	cmd.Flags().BoolVarP(&removeFlag, "remove", "r", false, "Remove a file from a rule key")
 	cmd.Flags().BoolVar(&removeAllFlag, "all", false, "Remove the entire key and all its files (used with --remove)")
+	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "local", "Mode to operate on: 'local' or 'global'")
 
 	return cmd
 }
