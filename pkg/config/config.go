@@ -11,18 +11,11 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	Windsurf WindsurfConfig `toml:"windsurf"`
-	Cursor   CursorConfig   `toml:"cursor"`
+	Editors map[string]EditorConfig `toml:"editors"`
 }
 
-// WindsurfConfig represents Windsurf-specific configuration
-type WindsurfConfig struct {
-	Local  map[string][]string `toml:"local"`
-	Global map[string][]string `toml:"global"`
-}
-
-// CursorConfig represents Cursor-specific configuration
-type CursorConfig struct {
+// EditorConfig represents editor-specific configuration
+type EditorConfig struct {
 	Local  map[string][]string `toml:"local"`
 	Global map[string][]string `toml:"global"`
 }
@@ -30,20 +23,22 @@ type CursorConfig struct {
 // GetDefaultConfig returns the default configuration
 func GetDefaultConfig() *Config {
 	return &Config{
-		Windsurf: WindsurfConfig{
-			Local: map[string][]string{
-				"default": {"templates/windsurf/local/.windsurfrules"},
+		Editors: map[string]EditorConfig{
+			"windsurf": {
+				Local: map[string][]string{
+					"default": {"templates/windsurf/local/.windsurfrules"},
+				},
+				Global: map[string][]string{
+					"default": {"templates/windsurf/global/global_rules.md"},
+				},
 			},
-			Global: map[string][]string{
-				"default": {"templates/windsurf/global/global_rules.md"},
-			},
-		},
-		Cursor: CursorConfig{
-			Local: map[string][]string{
-				"default": {"templates/cursor/local/project_rules.mdc"},
-			},
-			Global: map[string][]string{
-				"default": {"templates/cursor/global/global_rules.mdc"},
+			"cursor": {
+				Local: map[string][]string{
+					"default": {"templates/cursor/local/project_rules.mdc"},
+				},
+				Global: map[string][]string{
+					"default": {"templates/cursor/global/global_rules.mdc"},
+				},
 			},
 		},
 	}
@@ -97,6 +92,11 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
+	// Ensure the editors map is initialized
+	if config.Editors == nil {
+		config.Editors = make(map[string]EditorConfig)
+	}
+
 	return &config, nil
 }
 
@@ -128,31 +128,22 @@ func GetRuleFilePaths(editor, mode, key string) ([]string, error) {
 		return nil, err
 	}
 
-	var ruleFiles []string
-	var ok bool
+	// Check if editor exists
+	editorConfig, ok := config.Editors[editor]
+	if !ok {
+		return nil, fmt.Errorf("editor '%s' not found", editor)
+	}
 
-	// Get rule file names from config based on editor and mode
-	switch editor {
-	case "windsurf":
-		switch mode {
-		case "local":
-			ruleFiles, ok = config.Windsurf.Local[key]
-		case "global":
-			ruleFiles, ok = config.Windsurf.Global[key]
-		default:
-			return nil, fmt.Errorf("invalid mode '%s' for windsurf", mode)
-		}
-	case "cursor":
-		switch mode {
-		case "local":
-			ruleFiles, ok = config.Cursor.Local[key]
-		case "global":
-			ruleFiles, ok = config.Cursor.Global[key]
-		default:
-			return nil, fmt.Errorf("invalid mode '%s' for cursor", mode)
-		}
+	var ruleFiles []string
+
+	// Get rule file names from config based on mode
+	switch mode {
+	case "local":
+		ruleFiles, ok = editorConfig.Local[key]
+	case "global":
+		ruleFiles, ok = editorConfig.Global[key]
 	default:
-		return nil, fmt.Errorf("invalid editor '%s'", editor)
+		return nil, fmt.Errorf("invalid mode '%s'", mode)
 	}
 
 	if !ok {
@@ -172,4 +163,18 @@ func GetRuleFilePaths(editor, mode, key string) ([]string, error) {
 	}
 
 	return absolutePaths, nil
+}
+
+// GetSupportedEditors returns a list of supported editors
+func GetSupportedEditors() []string {
+	config, err := LoadConfig()
+	if err != nil {
+		return []string{"windsurf", "cursor"} // Default editors if config can't be loaded
+	}
+
+	editors := make([]string, 0, len(config.Editors))
+	for editor := range config.Editors {
+		editors = append(editors, editor)
+	}
+	return editors
 }

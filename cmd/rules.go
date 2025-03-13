@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hashiiiii/airules/pkg/config"
 	"github.com/spf13/cobra"
@@ -15,12 +16,24 @@ func newRulesCmd() *cobra.Command {
 	var removeFlag bool
 	var removeAllFlag bool
 	var modeFlag string
+	var editorFlag string
+	var listEditorsFlag bool
 
 	cmd := &cobra.Command{
 		Use:   "rules",
 		Short: "Manage rules-for-ai files",
 		Long:  "List, add, and remove rules-for-ai files",
 		Run: func(cmd *cobra.Command, args []string) {
+			// List supported editors if requested
+			if listEditorsFlag {
+				supportedEditors := config.GetSupportedEditors()
+				fmt.Println("Supported editors:")
+				for _, editor := range supportedEditors {
+					fmt.Printf("  - %s\n", editor)
+				}
+				return
+			}
+
 			// Error if multiple operation flags are specified
 			flagCount := 0
 			if listFlag {
@@ -44,12 +57,6 @@ func newRulesCmd() *cobra.Command {
 				listFlag = true
 			}
 
-			// Validate mode flag
-			if modeFlag != "local" && modeFlag != "global" {
-				fmt.Printf("Error: Invalid mode '%s'. Must be 'local' or 'global'\n", modeFlag)
-				return
-			}
-
 			// Load configuration
 			cfg, err := config.LoadConfig()
 			if err != nil {
@@ -57,17 +64,51 @@ func newRulesCmd() *cobra.Command {
 				return
 			}
 
-			// Get the appropriate map based on mode
+			// Validate editor flag
+			supportedEditors := config.GetSupportedEditors()
+			editorValid := false
+			for _, editor := range supportedEditors {
+				if editorFlag == editor {
+					editorValid = true
+					break
+				}
+			}
+			if !editorValid {
+				fmt.Printf("Error: Invalid editor '%s'. Supported editors: %s\n",
+					editorFlag, strings.Join(supportedEditors, ", "))
+				return
+			}
+
+			// Validate mode flag
+			if modeFlag != "local" && modeFlag != "global" {
+				fmt.Printf("Error: Invalid mode '%s'. Must be 'local' or 'global'\n", modeFlag)
+				return
+			}
+
+			// Get the appropriate map based on editor and mode
 			var rulesMap map[string][]string
+			editorConfig := cfg.Editors[editorFlag]
 			if modeFlag == "local" {
-				rulesMap = cfg.Windsurf.Local
+				rulesMap = editorConfig.Local
+				if rulesMap == nil {
+					rulesMap = make(map[string][]string)
+					editorConfig.Local = rulesMap
+				}
 			} else {
-				rulesMap = cfg.Windsurf.Global
+				rulesMap = editorConfig.Global
+				if rulesMap == nil {
+					rulesMap = make(map[string][]string)
+					editorConfig.Global = rulesMap
+				}
 			}
 
 			// List operation
 			if listFlag {
-				fmt.Printf("Available rule keys for windsurf %s mode:\n", modeFlag)
+				fmt.Printf("Available rule keys for %s %s mode:\n", editorFlag, modeFlag)
+				if len(rulesMap) == 0 {
+					fmt.Println("  No rules defined")
+					return
+				}
 				for key, files := range rulesMap {
 					fmt.Printf("  %s:\n", key)
 					for _, file := range files {
@@ -116,12 +157,13 @@ func newRulesCmd() *cobra.Command {
 				// Add file to key
 				rulesMap[key] = append(rulesMap[key], filePath)
 
-				// Update the config based on mode
+				// Update the config
 				if modeFlag == "local" {
-					cfg.Windsurf.Local = rulesMap
+					editorConfig.Local = rulesMap
 				} else {
-					cfg.Windsurf.Global = rulesMap
+					editorConfig.Global = rulesMap
 				}
+				cfg.Editors[editorFlag] = editorConfig
 
 				// Save configuration
 				if err := config.SaveConfig(cfg); err != nil {
@@ -129,7 +171,7 @@ func newRulesCmd() *cobra.Command {
 					return
 				}
 
-				fmt.Printf("Added file '%s' to key '%s' in %s mode\n", filePath, key, modeFlag)
+				fmt.Printf("Added file '%s' to key '%s' in %s %s mode\n", filePath, key, editorFlag, modeFlag)
 				return
 			}
 
@@ -144,7 +186,7 @@ func newRulesCmd() *cobra.Command {
 
 				// Check if key exists
 				if _, ok := rulesMap[key]; !ok {
-					fmt.Printf("Key '%s' not found in %s mode\n", key, modeFlag)
+					fmt.Printf("Key '%s' not found in %s %s mode\n", key, editorFlag, modeFlag)
 					return
 				}
 
@@ -152,12 +194,13 @@ func newRulesCmd() *cobra.Command {
 				if removeAllFlag || len(args) == 1 {
 					delete(rulesMap, key)
 
-					// Update the config based on mode
+					// Update the config
 					if modeFlag == "local" {
-						cfg.Windsurf.Local = rulesMap
+						editorConfig.Local = rulesMap
 					} else {
-						cfg.Windsurf.Global = rulesMap
+						editorConfig.Global = rulesMap
 					}
+					cfg.Editors[editorFlag] = editorConfig
 
 					// Save configuration
 					if err := config.SaveConfig(cfg); err != nil {
@@ -165,7 +208,7 @@ func newRulesCmd() *cobra.Command {
 						return
 					}
 
-					fmt.Printf("Removed key '%s' and all its files from %s mode\n", key, modeFlag)
+					fmt.Printf("Removed key '%s' and all its files from %s %s mode\n", key, editorFlag, modeFlag)
 					return
 				}
 
@@ -183,7 +226,7 @@ func newRulesCmd() *cobra.Command {
 				}
 
 				if !fileFound {
-					fmt.Printf("File '%s' not found in key '%s' in %s mode\n", filePath, key, modeFlag)
+					fmt.Printf("File '%s' not found in key '%s' in %s %s mode\n", filePath, key, editorFlag, modeFlag)
 					return
 				}
 
@@ -194,12 +237,13 @@ func newRulesCmd() *cobra.Command {
 					delete(rulesMap, key)
 				}
 
-				// Update the config based on mode
+				// Update the config
 				if modeFlag == "local" {
-					cfg.Windsurf.Local = rulesMap
+					editorConfig.Local = rulesMap
 				} else {
-					cfg.Windsurf.Global = rulesMap
+					editorConfig.Global = rulesMap
 				}
+				cfg.Editors[editorFlag] = editorConfig
 
 				// Save configuration
 				if err := config.SaveConfig(cfg); err != nil {
@@ -207,7 +251,7 @@ func newRulesCmd() *cobra.Command {
 					return
 				}
 
-				fmt.Printf("Removed file '%s' from key '%s' in %s mode\n", filePath, key, modeFlag)
+				fmt.Printf("Removed file '%s' from key '%s' in %s %s mode\n", filePath, key, editorFlag, modeFlag)
 				return
 			}
 		},
@@ -217,8 +261,10 @@ func newRulesCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&listFlag, "list", "l", false, "List available rule keys and files")
 	cmd.Flags().BoolVarP(&addFlag, "add", "a", false, "Add a file to a rule key")
 	cmd.Flags().BoolVarP(&removeFlag, "remove", "r", false, "Remove a file from a rule key")
-	cmd.Flags().BoolVar(&removeAllFlag, "all", false, "Remove the entire key and all its files (used with --remove)")
+	cmd.Flags().BoolVar(&removeAllFlag, "remove-all", false, "Remove the entire key and all its files (used with --remove)")
 	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "local", "Mode to operate on: 'local' or 'global'")
+	cmd.Flags().StringVarP(&editorFlag, "editor", "e", "windsurf", "Editor to operate on (use --list-editors to see supported editors)")
+	cmd.Flags().BoolVar(&listEditorsFlag, "list-editors", false, "List supported editors")
 
 	return cmd
 }
