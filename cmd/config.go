@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newRulesCmd() *cobra.Command {
+func newConfigCmd() *cobra.Command {
 	var listFlag bool
 	var addFlag bool
 	var removeFlag bool
@@ -20,9 +20,32 @@ func newRulesCmd() *cobra.Command {
 	var listEditorsFlag bool
 
 	cmd := &cobra.Command{
-		Use:   "rules",
-		Short: "Manage rules-for-ai files",
-		Long:  "List, add, and remove rules-for-ai files",
+		Use:   "config [flags] [args...]",
+		Short: "Manage AI editor rules configuration",
+		Long: `Manage rules-for-ai files for AI-powered editors.
+
+This command allows you to list, add, and remove rule files for AI-powered editors.
+Each rule is identified by a key and associated with one or more files.
+
+Rules can be configured in either 'local' (project-specific) or 'global' (all projects) mode.
+Use the --editor flag to specify which editor's rules to manage.`,
+		Example: `  # List all rules for the default editor in local mode
+  airules config --list
+
+  # Add a file to a rule key
+  airules config --add coding_standards templates/standards.md
+
+  # Remove a specific file from a rule key
+  airules config --remove coding_standards templates/standards.md
+
+  # Remove an entire rule key and all its files
+  airules config --remove coding_standards --remove-all
+
+  # List rules for a specific editor in global mode
+  airules config --list --editor cursor --mode global
+
+  # List supported editors
+  airules config --list-editors`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// List supported editors if requested
 			if listEditorsFlag {
@@ -121,7 +144,8 @@ func newRulesCmd() *cobra.Command {
 			// Add operation
 			if addFlag {
 				if len(args) != 2 {
-					fmt.Println("Error: 'rules --add' requires exactly 2 arguments: <key> <file>")
+					fmt.Println("Error: 'config --add' requires exactly 2 arguments: <key> <file>")
+					fmt.Println("Example: airules config --add coding_standards templates/standards.md")
 					return
 				}
 
@@ -178,7 +202,9 @@ func newRulesCmd() *cobra.Command {
 			// Remove operation
 			if removeFlag {
 				if len(args) < 1 {
-					fmt.Println("Error: 'rules --remove' requires at least 1 argument: <key> [file]")
+					fmt.Println("Error: 'config --remove' requires at least 1 argument: <key> [file]")
+					fmt.Println("Example: airules config --remove coding_standards templates/standards.md")
+					fmt.Println("Example: airules config --remove coding_standards --remove-all")
 					return
 				}
 
@@ -259,10 +285,10 @@ func newRulesCmd() *cobra.Command {
 
 	// Add flags
 	cmd.Flags().BoolVarP(&listFlag, "list", "l", false, "List available rule keys and files")
-	cmd.Flags().BoolVarP(&addFlag, "add", "a", false, "Add a file to a rule key")
-	cmd.Flags().BoolVarP(&removeFlag, "remove", "r", false, "Remove a file from a rule key")
-	cmd.Flags().BoolVar(&removeAllFlag, "remove-all", false, "Remove the entire key and all its files (used with --remove)")
-	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "local", "Mode to operate on: 'local' or 'global'")
+	cmd.Flags().BoolVarP(&addFlag, "add", "a", false, "Add a file to a rule key (requires <key> <file> arguments)")
+	cmd.Flags().BoolVarP(&removeFlag, "remove", "r", false, "Remove a file from a rule key (requires <key> [file] arguments)")
+	cmd.Flags().BoolVar(&removeAllFlag, "remove-all", false, "Remove the entire key and all its files (used with --remove <key>)")
+	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "local", "Mode to operate on: 'local' (project-specific) or 'global' (all projects)")
 	cmd.Flags().StringVarP(&editorFlag, "editor", "e", "windsurf", "Editor to operate on (use --list-editors to see supported editors)")
 	cmd.Flags().BoolVar(&listEditorsFlag, "list-editors", false, "List supported editors")
 
