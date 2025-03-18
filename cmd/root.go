@@ -29,9 +29,9 @@ func NewRootCmd() *cobra.Command {
 	cmd.CompletionOptions.DisableDefaultCmd = true
 
 	// Add subcommands
-	cmd.AddCommand(newWindsurfCmd())
+	cmd.AddCommand(newInstallCmd())
+	cmd.AddCommand(newTemplateCmd())
 	cmd.AddCommand(newVersionCmd())
-	cmd.AddCommand(newConfigCmd())
 	cmd.AddCommand(newInitCmd())
 
 	return cmd

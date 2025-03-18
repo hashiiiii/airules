@@ -1,0 +1,22 @@
+{
+    "windsurf.autocompleteSpeed": "fast",
+    "windsurf.autoExecutionPolicy": "off",
+    "windsurf.chatFontSize": "default",
+    "windsurf.rememberLastModelSelection": true,
+    "windsurf.openRecentConversation": true,
+    "windsurf.explainAndFixInCurrentConversation": true,
+    "workbench.colorTheme": "Tokyo Night",
+    "go.goroot": "~/.local/share/mise/installs/go/1.24.0",
+    "go.lintTool": "golangci-lint",
+    "go.lintFlags": [
+        "--fast"
+    ],
+    "go.lintOnSave": "package",
+    "editor.formatOnSave": true,
+    "[go]": {
+        "editor.defaultFormatter": "golang.go",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    }
+}

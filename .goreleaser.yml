@@ -1,3 +1,7 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+version: 2
+
 project_name: airules
 
 before:
@@ -33,7 +37,7 @@ archives:
 
 brews:
   - name: airules
-    tap:
+    repository:
       owner: hashiiiii
       name: homebrew-tap
     homepage: "https://github.com/hashiiiii/airules"
@@ -45,9 +49,6 @@ brews:
 checksum:
   name_template: "checksums.txt"
 
-snapshots:
-  name_template: "{{ .Tag }}-next"
-
 changelog:
   sort: asc
   filters:
@@ -56,3 +57,5 @@ changelog:
       - '^test:'
       - '^ci:'
       - '^chore:'
+      - Merge pull request
+      - Merge branch

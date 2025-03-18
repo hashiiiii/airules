@@ -17,14 +17,20 @@
 # Dependency directories (remove the comment below to include it)
 vendor/
 
-# Binary output directory
-bin/
+# Binary output directory - keep directory, ignore contents
+bin/*
+!bin/.gitkeep
+
+# Output directory for coverage reports - keep directory, ignore contents
+out/*
+!out/.gitkeep
 
 # Documentation directory
 docs/
 
-# Template directory - ignore symlink
-templates
+# Template directory - keep directory, ignore contents
+templates/*
+!templates/.gitkeep
 
 # idea
 .idea/
@@ -35,9 +41,6 @@ go.work.sum
 
 # env file
 .env
-
-# vs code
-.vscode/
 
 # GoReleaser
 dist/

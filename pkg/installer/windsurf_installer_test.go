@@ -42,11 +42,14 @@ func TestWindsurfInstaller_InstallLocal(t *testing.T) {
 
 	mockFS := new(MockFileSystem)
 	installer := &WindsurfInstaller{
-		localDestDir:   "local",
-		localFileName:  ".windsurfrules",
-		globalDestDir:  "global",
-		globalFileName: "global_rules.md",
-		fs:             mockFS,
+		BaseInstaller: BaseInstaller{
+			localDestDir:   "local",
+			localFileName:  ".windsurfrules",
+			globalDestDir:  "global",
+			globalFileName: "global_rules.md",
+			editor:         "windsurf",
+			fs:             mockFS,
+		},
 	}
 
 	// テストデータ

@@ -68,11 +68,13 @@ test: ## Run all tests
 	@echo "Running tests..."
 	go test -v -parallel 4 ./...
 
-.PHONY: test-coverage
-test-coverage: ## Run tests with coverage
+.PHONY: coverage
+coverage: ## Run tests with coverage
 	@echo "Running tests with coverage..."
-	go test -coverprofile=coverage.out ./...
-	go tool cover -html=coverage.out -o coverage.html
+	@mkdir -p out
+	go test -coverprofile=out/coverage.out ./...
+	go tool cover -html=out/coverage.out -o out/coverage.html
+	@echo "Coverage report generated at out/coverage.html"
 
 
 .PHONY: lint
@@ -80,3 +82,14 @@ lint: ## Run linter and fix issues
 	@echo "Running linter with auto-fix..."
 	gofmt -w -s .
 	golangci-lint run --fix ./...
+
+.PHONY: snapshot
+snapshot: ## Create a snapshot release for testing
+	@echo "Creating snapshot release..."
+	mise exec -- goreleaser release --snapshot --clean
+
+.PHONY: release
+release: ## Create a new release
+	@echo "Creating release..."
+	@echo "Make sure you have set GITHUB_TOKEN and created a new tag!"
+	mise exec -- goreleaser release
