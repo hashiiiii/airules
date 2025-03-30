@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashiiiii/airules/pkg/installer"
 	"github.com/spf13/cobra"
@@ -11,106 +12,91 @@ import (
 func newInstallCmd() *cobra.Command {
 	var editorFlag string
 	var modeFlag string
-	var templateFlag string
 
 	cmd := &cobra.Command{
 		Use:   "install",
 		Short: "Install rules-for-ai files",
 		Long:  "Install rules-for-ai files for AI-powered editors like Windsurf and Cursor",
-		Example: `  # Install default rules for all editors and modes
-  airules install
+		Example: `  # Install both local and global rules for Windsurf
+  airules install -e windsurf
 
-  # Install rules only for Windsurf
-  airules install --editor=windsurf
+  # Install only local rules for Cursor
+  airules install -e cursor -m local
 
-  # Install rules only for local mode
-  airules install --mode=local
-
-  # Install rules for specific editor and mode
-  airules install --editor=cursor --mode=global
-
-  # Install rules using a specific template
-  airules install --template=coding_standards`,
+  # Install only global rules for Windsurf
+  airules install -e windsurf -m global`,
 		Run: func(cmd *cobra.Command, args []string) {
-			// Parse editors
-			editors := parseCommaList(editorFlag)
-			if len(editors) == 0 {
-				// Default to all supported editors
-				editors = installer.GetSupportedEditors()
+			// Check if editor is specified
+			if editorFlag == "" {
+				fmt.Println("Error: Editor must be specified using -e/--editor flag")
+				fmt.Println("Supported editors:", strings.Join(installer.GetSupportedEditors(), ", "))
+				return
 			}
 
-			// Parse modes
-			modes := parseCommaList(modeFlag)
-			if len(modes) == 0 {
-				// Default to all modes
-				modes = []string{"local", "global"}
+			// Check if editor is supported
+			if !installer.IsEditorSupported(editorFlag) {
+				fmt.Printf("Error: Unsupported editor '%s'\n", editorFlag)
+				fmt.Println("Supported editors:", strings.Join(installer.GetSupportedEditors(), ", "))
+				return
 			}
 
-			// Install for each editor and mode
-			for _, editor := range editors {
-				for _, mode := range modes {
-					fmt.Printf("Installing %s rules for %s mode using template '%s'...\n", editor, mode, templateFlag)
-
-					// Get appropriate installer
-					inst, err := installer.GetInstaller(editor)
-					if err != nil {
-						fmt.Printf("Error: %v\n", err)
-						continue
-					}
-
-					// Determine installation type
-					var installType installer.InstallType
-					switch mode {
-					case "local":
-						installType = installer.Local
-					case "global":
-						installType = installer.Global
-					default:
-						fmt.Printf("Error: Unknown mode '%s'\n", mode)
-						continue
-					}
-
-					// Install with template
-					err = inst.InstallWithKey(installType, templateFlag)
-					if err != nil {
-						fmt.Printf("Error during installation: %v\n", err)
-						continue
-					}
-
-					fmt.Printf("Successfully installed %s rules for %s mode\n", editor, mode)
+			// Determine installation type based on mode flag
+			var installType installer.InstallType
+			switch modeFlag {
+			case "local":
+				installType = installer.Local
+			case "global":
+				// グローバルモードが指定されたがサポートされていない場合はエラー
+				if !installer.IsGlobalModeSupported(editorFlag) {
+					fmt.Printf("Error: Editor '%s' does not support global mode installation through files\n", editorFlag)
+					fmt.Println("Global rules for this editor must be set through the editor's settings interface")
+					return
 				}
+				installType = installer.Global
+			case "":
+				// Default to both modes if not specified
+				installType = installer.All
+			default:
+				fmt.Printf("Error: Invalid mode '%s'. Valid values are 'local' or 'global'\n", modeFlag)
+				return
 			}
+
+			// Display information about the installation
+			fmt.Printf("Installing %s rules for %s editor...\n", getInstallTypeLabel(installType, editorFlag), editorFlag)
+
+			// Install rules
+			err := installer.Install(editorFlag, installType)
+			if err != nil {
+				fmt.Printf("Error during installation: %v\n", err)
+				return
+			}
+
+			// Success message
+			fmt.Printf("Successfully installed rules for %s editor\n", editorFlag)
 		},
 	}
 
 	// Add flags
-	cmd.Flags().StringVarP(&editorFlag, "editor", "e", "", "Editor(s) to install rules for (comma-separated: windsurf,cursor or 'all')")
-	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "", "Mode(s) to install rules for (comma-separated: local,global or 'all')")
-	cmd.Flags().StringVarP(&templateFlag, "template", "t", "default", "Template key to use for installation")
+	cmd.Flags().StringVarP(&editorFlag, "editor", "e", "", "Editor to install rules for (required)")
+	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "", "Mode to install rules for: 'local', 'global', or both if not specified")
+	cmd.MarkFlagRequired("editor")
 
 	return cmd
 }
 
-// parseCommaList parses a comma-separated string into a slice of strings
-func parseCommaList(s string) []string {
-	if s == "" || s == "all" {
-		return []string{}
-	}
-
-	var result []string
-	current := ""
-	for i := 0; i < len(s); i++ {
-		if s[i] == ',' {
-			if current != "" {
-				result = append(result, current)
-				current = ""
-			}
-		} else {
-			current += string(s[i])
+// getInstallTypeLabel returns a human-readable label for the install type
+func getInstallTypeLabel(installType installer.InstallType, editor string) string {
+	switch installType {
+	case installer.Local:
+		return "local"
+	case installer.Global:
+		return "global"
+	case installer.All:
+		if installer.IsGlobalModeSupported(editor) {
+			return "local and global"
 		}
+		return "local"
+	default:
+		return "unknown"
 	}
-	if current != "" {
-		result = append(result, current)
-	}
-	return result
 }
