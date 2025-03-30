@@ -29,7 +29,6 @@ func NewRootCmd() *cobra.Command {
 
 	// Add subcommands
 	cmd.AddCommand(newInstallCmd())
-	cmd.AddCommand(newTemplateCmd())
 	cmd.AddCommand(newVersionCmd())
 	cmd.AddCommand(newInitCmd())
 
