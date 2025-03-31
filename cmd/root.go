@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewRootCmd returns the root command for airules
+// NewRootCmd returns the root command for airules.
 func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "airules",

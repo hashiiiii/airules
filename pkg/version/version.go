@@ -2,7 +2,7 @@ package version
 
 import "fmt"
 
-// The following variables will be overwritten at build time using -ldflags
+// The following variables will be overwritten at build time using -ldflags.
 var (
 	Version   = "unknown"
 	Commit    = "unknown"

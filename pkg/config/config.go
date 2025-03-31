@@ -9,18 +9,18 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
-// Config represents the application configuration
+// Config represents the application configuration.
 type Config struct {
 	Editors map[string]EditorConfig `toml:"editors"`
 }
 
-// EditorConfig represents editor-specific configuration
+// EditorConfig represents editor-specific configuration.
 type EditorConfig struct {
 	Local  map[string][]string `toml:"local"`
 	Global map[string][]string `toml:"global"`
 }
 
-// GetDefaultConfig returns the default configuration
+// GetDefaultConfig returns the default configuration.
 func GetDefaultConfig() *Config {
 	return &Config{
 		Editors: map[string]EditorConfig{
@@ -44,31 +44,32 @@ func GetDefaultConfig() *Config {
 	}
 }
 
-// GetConfigDir returns the base configuration directory
+// GetConfigDir returns the base configuration directory.
 func GetConfigDir() (string, error) {
 	home, err := homedir.Dir()
 	if err != nil {
 		return "", err
 	}
 	configDir := filepath.Join(home, ".config", "airules")
+
 	return configDir, nil
 }
 
-// EnsureConfigDir creates the configuration directory if it doesn't exist
+// EnsureConfigDir creates the configuration directory if it doesn't exist.
 func EnsureConfigDir() (string, error) {
 	configDir, err := GetConfigDir()
 	if err != nil {
 		return "", err
 	}
 
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return "", fmt.Errorf("Failed to create config directory: %w", err)
 	}
 
 	return configDir, nil
 }
 
-// LoadConfig loads the configuration from file
+// LoadConfig loads the configuration from file.
 func LoadConfig() (*Config, error) {
 	configDir, err := GetConfigDir()
 	if err != nil {
@@ -83,6 +84,7 @@ func LoadConfig() (*Config, error) {
 		if err := SaveConfig(config); err != nil {
 			return nil, err
 		}
+
 		return config, nil
 	}
 
@@ -100,7 +102,7 @@ func LoadConfig() (*Config, error) {
 	return &config, nil
 }
 
-// SaveConfig saves the configuration to file
+// SaveConfig saves the configuration to file.
 func SaveConfig(config *Config) error {
 	configDir, err := EnsureConfigDir()
 	if err != nil {
@@ -118,10 +120,11 @@ func SaveConfig(config *Config) error {
 
 	// Write config to file
 	encoder := toml.NewEncoder(f)
+
 	return encoder.Encode(config)
 }
 
-// GetRuleFilePaths returns the paths to rule files by editor, mode and key
+// GetRuleFilePaths returns the paths to rule files by editor, mode and key.
 func GetRuleFilePaths(editor, mode, key string) ([]string, error) {
 	config, err := LoadConfig()
 	if err != nil {
@@ -157,7 +160,7 @@ func GetRuleFilePaths(editor, mode, key string) ([]string, error) {
 	}
 
 	// Convert relative paths to absolute paths
-	var absolutePaths []string
+	absolutePaths := make([]string, 0, len(ruleFiles))
 	for _, file := range ruleFiles {
 		absolutePaths = append(absolutePaths, filepath.Join(configDir, file))
 	}
@@ -165,7 +168,7 @@ func GetRuleFilePaths(editor, mode, key string) ([]string, error) {
 	return absolutePaths, nil
 }
 
-// GetSupportedEditors returns a list of supported editors
+// GetSupportedEditors returns a list of supported editors.
 func GetSupportedEditors() []string {
 	config, err := LoadConfig()
 	if err != nil {
@@ -176,5 +179,6 @@ func GetSupportedEditors() []string {
 	for editor := range config.Editors {
 		editors = append(editors, editor)
 	}
+
 	return editors
 }

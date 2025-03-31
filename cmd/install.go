@@ -8,7 +8,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newInstallCmd returns the install command
+const (
+	modeLocal  = "local"
+	modeGlobal = "global"
+)
+
+// newInstallCmd returns the install command.
 func newInstallCmd() *cobra.Command {
 	var editorFlag string
 	var modeFlag string
@@ -30,6 +35,7 @@ func newInstallCmd() *cobra.Command {
 			if editorFlag == "" {
 				fmt.Println("Error: Editor must be specified using -e/--editor flag")
 				fmt.Println("Supported editors:", strings.Join(installer.GetSupportedEditors(), ", "))
+
 				return
 			}
 
@@ -37,19 +43,21 @@ func newInstallCmd() *cobra.Command {
 			if !installer.IsEditorSupported(editorFlag) {
 				fmt.Printf("Error: Unsupported editor '%s'\n", editorFlag)
 				fmt.Println("Supported editors:", strings.Join(installer.GetSupportedEditors(), ", "))
+
 				return
 			}
 
 			// Determine installation type based on mode flag
 			var installType installer.InstallType
 			switch modeFlag {
-			case "local":
+			case modeLocal:
 				installType = installer.Local
-			case "global":
+			case modeGlobal:
 				// グローバルモードが指定されたがサポートされていない場合はエラー
 				if !installer.IsGlobalModeSupported(editorFlag) {
 					fmt.Printf("Error: Editor '%s' does not support global mode installation through files\n", editorFlag)
 					fmt.Println("Global rules for this editor must be set through the editor's settings interface")
+
 					return
 				}
 				installType = installer.Global
@@ -57,7 +65,8 @@ func newInstallCmd() *cobra.Command {
 				// Default to both modes if not specified
 				installType = installer.All
 			default:
-				fmt.Printf("Error: Invalid mode '%s'. Valid values are 'local' or 'global'\n", modeFlag)
+				fmt.Printf("Error: Invalid mode '%s'. Valid values are '%s' or '%s'\n", modeFlag, modeLocal, modeGlobal)
+
 				return
 			}
 
@@ -68,6 +77,7 @@ func newInstallCmd() *cobra.Command {
 			err := installer.Install(editorFlag, installType)
 			if err != nil {
 				fmt.Printf("Error during installation: %v\n", err)
+
 				return
 			}
 
@@ -78,13 +88,21 @@ func newInstallCmd() *cobra.Command {
 
 	// Add flags
 	cmd.Flags().StringVarP(&editorFlag, "editor", "e", "", "Editor to install rules for (required)")
-	cmd.Flags().StringVarP(&modeFlag, "mode", "m", "", "Mode to install rules for: 'local', 'global', or both if not specified")
-	cmd.MarkFlagRequired("editor")
+	cmd.Flags().StringVarP(
+		&modeFlag,
+		"mode",
+		"m",
+		"",
+		fmt.Sprintf("Mode to install rules for: '%s', '%s', or both if not specified", modeLocal, modeGlobal),
+	)
+	if err := cmd.MarkFlagRequired("editor"); err != nil {
+		panic(fmt.Sprintf("failed to mark 'editor' flag as required: %v", err))
+	}
 
 	return cmd
 }
 
-// getInstallTypeLabel returns a human-readable label for the install type
+// getInstallTypeLabel returns a human-readable label for the install type.
 func getInstallTypeLabel(installType installer.InstallType, editor string) string {
 	switch installType {
 	case installer.Local:
@@ -95,6 +113,7 @@ func getInstallTypeLabel(installType installer.InstallType, editor string) strin
 		if installer.IsGlobalModeSupported(editor) {
 			return "local and global"
 		}
+
 		return "local"
 	default:
 		return "unknown"

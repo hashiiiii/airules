@@ -9,23 +9,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashiiiii/airules/pkg/config"
 	"github.com/mitchellh/go-homedir"
 )
 
-// InstallType represents the type of installation
+// InstallType represents the type of installation.
 type InstallType int
 
 const (
-	// Local represents local installation
+	// Local represents local installation.
 	Local InstallType = iota
-	// Global represents global installation
+	// Global represents global installation.
 	Global
-	// All represents both local and global installation
+	// All represents both local and global installation.
 	All
 )
 
-// String returns the string representation of InstallType
+// String returns the string representation of InstallType.
 func (t InstallType) String() string {
 	switch t {
 	case Local:
@@ -39,16 +38,33 @@ func (t InstallType) String() string {
 	}
 }
 
-// EditorConfig holds the configuration for a specific editor
+// EditorConfig represents the configuration for an editor.
 type EditorConfig struct {
-	LocalDestDir    string
-	GlobalDestDir   string
+	Name            string
+	GlobalSupported bool
+	LocalPath       string
+	GlobalPath      string
 	LocalFileName   string
 	GlobalFileName  string
-	GlobalSupported bool
 }
 
-// editorConfigs maps editor names to their configurations
+// GetRuleFilePaths returns the rule file paths for the specified mode.
+func (c *EditorConfig) GetRuleFilePaths(mode string) ([]string, error) {
+	switch mode {
+	case "local":
+		return []string{filepath.Join(c.LocalPath, c.LocalFileName)}, nil
+	case "global":
+		if !c.GlobalSupported {
+			return nil, fmt.Errorf("global mode not supported for editor %s", c.Name)
+		}
+
+		return []string{filepath.Join(c.GlobalPath, c.GlobalFileName)}, nil
+	default:
+		return nil, fmt.Errorf("invalid mode: %s", mode)
+	}
+}
+
+// editorConfigs maps editor names to their configurations.
 var editorConfigs = map[string]func() (EditorConfig, error){
 	"windsurf": func() (EditorConfig, error) {
 		home, err := homedir.Dir()
@@ -65,10 +81,8 @@ var editorConfigs = map[string]func() (EditorConfig, error){
 		}
 
 		return EditorConfig{
-			LocalDestDir:    ".",
-			GlobalDestDir:   globalDestDir,
-			LocalFileName:   ".windsurfrules",
-			GlobalFileName:  "global_rules.md",
+			LocalPath:       ".",
+			GlobalPath:      globalDestDir,
 			GlobalSupported: true,
 		}, nil
 	},
@@ -76,17 +90,16 @@ var editorConfigs = map[string]func() (EditorConfig, error){
 		// Store local rules in the ./.cursor/rules/ directory
 		// Also store global rules in the same directory (based on user request)
 		localDestDir := filepath.Join(".", ".cursor", "rules")
+
 		return EditorConfig{
-			LocalDestDir:    localDestDir,
-			GlobalDestDir:   localDestDir, // Use the same directory as local rules
-			LocalFileName:   "project_rules.mdc",
-			GlobalFileName:  "global_rules.mdc",
-			GlobalSupported: true, // Support global rules
+			LocalPath:       localDestDir,
+			GlobalPath:      localDestDir, // Use the same directory as local rules
+			GlobalSupported: true,         // Support global rules
 		}, nil
 	},
 }
 
-// FileSystem interface defines file system operations
+// FileSystem interface defines file system operations.
 type FileSystem interface {
 	MkdirAll(path string, perm os.FileMode) error
 	CopyFile(src, dest string) error
@@ -96,7 +109,7 @@ type FileSystem interface {
 	Rename(oldpath, newpath string) error
 }
 
-// DefaultFileSystem implements FileSystem interface using OS operations
+// DefaultFileSystem implements FileSystem interface using OS operations.
 type DefaultFileSystem struct{}
 
 func (fs *DefaultFileSystem) MkdirAll(path string, perm os.FileMode) error {
@@ -123,16 +136,15 @@ func (fs *DefaultFileSystem) Rename(oldpath, newpath string) error {
 	return os.Rename(oldpath, newpath)
 }
 
-// CopyFile copies a file from src to dest
+// CopyFile copies a file from src to dest.
 func CopyFile(src, dest string) error {
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("could not open source file: %w", err)
 	}
 	defer func(srcFile *os.File) {
-		err := srcFile.Close()
-		if err != nil {
-			_ = fmt.Errorf("could not close source file: %w", err)
+		if closeErr := srcFile.Close(); closeErr != nil {
+			fmt.Printf("warning: could not close source file: %v\n", closeErr)
 		}
 	}(srcFile)
 
@@ -141,9 +153,8 @@ func CopyFile(src, dest string) error {
 		return fmt.Errorf("could not create destination file: %w", err)
 	}
 	defer func(destFile *os.File) {
-		err := destFile.Close()
-		if err != nil {
-			_ = fmt.Errorf("could not close source file: %w", err)
+		if closeErr := destFile.Close(); closeErr != nil {
+			fmt.Printf("warning: could not close destination file: %v\n", closeErr)
 		}
 	}(destFile)
 
@@ -165,22 +176,24 @@ func CopyFile(src, dest string) error {
 	return nil
 }
 
-// GetSupportedEditors returns a list of supported editors
+// GetSupportedEditors returns a list of supported editors.
 func GetSupportedEditors() []string {
 	editors := make([]string, 0, len(editorConfigs))
 	for editor := range editorConfigs {
 		editors = append(editors, editor)
 	}
+
 	return editors
 }
 
-// IsEditorSupported checks if an editor is supported
+// IsEditorSupported checks if an editor is supported.
 func IsEditorSupported(editor string) bool {
 	_, ok := editorConfigs[editor]
+
 	return ok
 }
 
-// IsGlobalModeSupported checks if the global mode is supported for the editor
+// IsGlobalModeSupported checks if the global mode is supported for the editor.
 func IsGlobalModeSupported(editor string) bool {
 	configFn, ok := editorConfigs[editor]
 	if !ok {
@@ -195,103 +208,84 @@ func IsGlobalModeSupported(editor string) bool {
 	return config.GlobalSupported
 }
 
-// Install installs rules for the specified editor and installation type
+// Install installs rules for the specified editor and installation type.
 func Install(editor string, installType InstallType) error {
 	return InstallWithKey(editor, installType, "default")
 }
 
-// InstallWithKey installs rules for the specified editor, installation type, and template key
-func InstallWithKey(editor string, installType InstallType, key string) error {
-	// Get editor configuration
-	configFn, ok := editorConfigs[editor]
-	if !ok {
+// validateInstallParams validates installation parameters.
+func validateInstallParams(editor string, installType InstallType, key string) error {
+	if !IsEditorSupported(editor) {
 		return fmt.Errorf("unsupported editor: %s", editor)
 	}
 
-	editorConfig, err := configFn()
-	if err != nil {
-		return fmt.Errorf("failed to get editor configuration: %w", err)
+	if key == "" {
+		return fmt.Errorf("key is required")
 	}
 
-	// If global mode installation is requested but the editor doesn't support it
-	if (installType == Global || installType == All) && !editorConfig.GlobalSupported {
-		if installType == Global {
-			return fmt.Errorf("editor '%s' does not support global mode installation through files", editor)
-		}
-		// For 'All' type, show warning and install only local rules
-		fmt.Printf("Warning: Editor '%s' does not support global mode installation through files. Only local rules will be installed.\n", editor)
-		installType = Local
+	if installType == Global && !IsGlobalModeSupported(editor) {
+		return fmt.Errorf("editor '%s' does not support global mode installation", editor)
 	}
 
-	// Ensure config directory exists
-	if _, err := config.EnsureConfigDir(); err != nil {
-		return fmt.Errorf("failed to ensure config directory: %w", err)
-	}
-
-	// Get rule file paths for the key
-	var rulePaths []string
-
-	// Get rule file paths based on installation type
-	switch installType {
-	case Local:
-		rulePaths, err = config.GetRuleFilePaths(editor, "local", key)
-	case Global:
-		rulePaths, err = config.GetRuleFilePaths(editor, "global", key)
-	case All:
-		// For "all", we'll combine both local and global rules
-		localRulePaths, localErr := config.GetRuleFilePaths(editor, "local", key)
-		if localErr != nil {
-			return fmt.Errorf("failed to get local rule file paths: %w", localErr)
-		}
-
-		if editorConfig.GlobalSupported {
-			globalRulePaths, globalErr := config.GetRuleFilePaths(editor, "global", key)
-			if globalErr != nil {
-				return fmt.Errorf("failed to get global rule file paths: %w", globalErr)
-			}
-			rulePaths = append(localRulePaths, globalRulePaths...)
-		} else {
-			rulePaths = localRulePaths
-		}
-		err = nil
-	default:
-		return fmt.Errorf("unknown install type: %v", installType)
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to get rule file paths: %w", err)
-	}
-
-	// Check if rule files exist
-	for _, path := range rulePaths {
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			return fmt.Errorf("rule file '%s' not found", path)
-		}
-	}
-
-	fs := &DefaultFileSystem{}
-
-	// Install based on type
-	switch installType {
-	case Local:
-		err = installLocal(fs, editorConfig, rulePaths)
-	case Global:
-		err = installGlobal(fs, editorConfig, rulePaths)
-	case All:
-		if err = installLocal(fs, editorConfig, rulePaths); err != nil {
-			return err
-		}
-		if editorConfig.GlobalSupported {
-			err = installGlobal(fs, editorConfig, rulePaths)
-		}
-	default:
-		return fmt.Errorf("unknown install type: %v", installType)
-	}
-
-	return err
+	return nil
 }
 
-// createBackup makes a backup of an existing file
+// getRulePaths gets rule paths based on installation type.
+func getRulePaths(fs FileSystem, editorConfig *EditorConfig, installType InstallType) ([]string, error) {
+	var localRulePaths, globalRulePaths []string
+	var err error
+
+	if installType == Local || installType == All {
+		localRulePaths, err = getLocalRulePaths(fs, editorConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get local rule paths: %w", err)
+		}
+	}
+
+	if (installType == Global || installType == All) && IsGlobalModeSupported(editorConfig.Name) {
+		globalRulePaths, err = getGlobalRulePaths(fs, editorConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get global rule paths: %w", err)
+		}
+	}
+
+	rulePaths := make([]string, len(localRulePaths)+len(globalRulePaths))
+	copy(rulePaths, localRulePaths)
+	copy(rulePaths[len(localRulePaths):], globalRulePaths)
+
+	return rulePaths, nil
+}
+
+// InstallWithKey installs rules for the specified editor with a given key.
+func InstallWithKey(editor string, installType InstallType, key string) error {
+	if err := validateInstallParams(editor, installType, key); err != nil {
+		return err
+	}
+
+	fs := NewOsFS()
+	editorConfig, err := GetEditorConfig(editor)
+	if err != nil {
+		return fmt.Errorf("failed to get editor config: %w", err)
+	}
+
+	rulePaths, err := getRulePaths(fs, &editorConfig, installType)
+	if err != nil {
+		return err
+	}
+
+	if len(rulePaths) == 0 {
+		return fmt.Errorf("no rules found for editor '%s'", editor)
+	}
+
+	err = installLocal(fs, &editorConfig, rulePaths)
+	if err != nil {
+		return fmt.Errorf("failed to install rules: %w", err)
+	}
+
+	return nil
+}
+
+// createBackup makes a backup of an existing file.
 func createBackup(fs FileSystem, filePath string) error {
 	// Check if the file exists
 	_, err := fs.Stat(filePath)
@@ -314,15 +308,16 @@ func createBackup(fs FileSystem, filePath string) error {
 	}
 
 	fmt.Printf("Created backup of existing file at: %s\n", backupPath)
+
 	return nil
 }
 
-// installLocal installs local rules using the specified rule files
-func installLocal(fs FileSystem, config EditorConfig, rulePaths []string) error {
-	destPath := filepath.Join(config.LocalDestDir, config.LocalFileName)
+// installLocal installs local rules using the specified rule files.
+func installLocal(fs FileSystem, config *EditorConfig, rulePaths []string) error {
+	destPath := filepath.Join(config.LocalPath, config.LocalFileName)
 	destDir := filepath.Dir(destPath)
 
-	if err := fs.MkdirAll(destDir, 0755); err != nil {
+	if err := fs.MkdirAll(destDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", destDir, err)
 	}
 
@@ -334,28 +329,7 @@ func installLocal(fs FileSystem, config EditorConfig, rulePaths []string) error 
 	return combineAndWriteRules(fs, rulePaths, destPath)
 }
 
-// installGlobal installs global rules using the specified rule files
-func installGlobal(fs FileSystem, config EditorConfig, rulePaths []string) error {
-	if !config.GlobalSupported || config.GlobalDestDir == "" || config.GlobalFileName == "" {
-		return fmt.Errorf("global rules installation not supported for this editor")
-	}
-
-	destPath := filepath.Join(config.GlobalDestDir, config.GlobalFileName)
-	destDir := filepath.Dir(destPath)
-
-	if err := fs.MkdirAll(destDir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", destDir, err)
-	}
-
-	// Create a backup of the existing file if it exists
-	if err := createBackup(fs, destPath); err != nil {
-		return err
-	}
-
-	return combineAndWriteRules(fs, rulePaths, destPath)
-}
-
-// combineAndWriteRules combines multiple rule files and writes them to the destination
+// combineAndWriteRules combines multiple rule files and writes them to the destination.
 func combineAndWriteRules(fs FileSystem, rulePaths []string, destPath string) error {
 	var combinedContent strings.Builder
 
@@ -374,9 +348,47 @@ func combineAndWriteRules(fs FileSystem, rulePaths []string, destPath string) er
 	}
 
 	// Write combined content to destination
-	if err := fs.WriteFile(destPath, []byte(combinedContent.String()), 0644); err != nil {
+	if err := fs.WriteFile(destPath, []byte(combinedContent.String()), 0o644); err != nil {
 		return fmt.Errorf("failed to write to '%s': %w", destPath, err)
 	}
 
 	return nil
+}
+
+// getLocalRulePaths returns the paths of local rules.
+func getLocalRulePaths(fs FileSystem, config *EditorConfig) ([]string, error) {
+	paths, err := config.GetRuleFilePaths("local")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get local rule paths: %w", err)
+	}
+
+	return paths, nil
+}
+
+// getGlobalRulePaths returns the paths of global rules.
+func getGlobalRulePaths(fs FileSystem, config *EditorConfig) ([]string, error) {
+	if !config.GlobalSupported {
+		return nil, nil
+	}
+	paths, err := config.GetRuleFilePaths("global")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get global rule paths: %w", err)
+	}
+
+	return paths, nil
+}
+
+// NewOsFS creates a new OS file system implementation.
+func NewOsFS() FileSystem {
+	return &DefaultFileSystem{}
+}
+
+// GetEditorConfig returns the configuration for the specified editor.
+func GetEditorConfig(editor string) (EditorConfig, error) {
+	configFn, ok := editorConfigs[editor]
+	if !ok {
+		return EditorConfig{}, fmt.Errorf("unsupported editor: %s", editor)
+	}
+
+	return configFn()
 }

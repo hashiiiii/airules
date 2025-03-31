@@ -21,12 +21,14 @@ func newInitCmd() *cobra.Command {
 			configDir, err := config.GetConfigDir()
 			if err != nil {
 				fmt.Printf("Failed to get config directory: %v\n", err)
+
 				return
 			}
 
 			// Create config directory if it doesn't exist
-			if err := os.MkdirAll(configDir, 0755); err != nil {
+			if err := os.MkdirAll(configDir, 0o755); err != nil {
 				fmt.Printf("Failed to create config directory: %v\n", err)
+
 				return
 			}
 
@@ -34,6 +36,7 @@ func newInitCmd() *cobra.Command {
 			_, filename, _, ok := runtime.Caller(0)
 			if !ok {
 				fmt.Println("Failed to get current file path")
+
 				return
 			}
 
@@ -46,6 +49,7 @@ func newInitCmd() *cobra.Command {
 			// Check if templates directory exists
 			if _, err := os.Stat(srcTemplatesDir); os.IsNotExist(err) {
 				fmt.Printf("'templates' directory not found at %s\n", srcTemplatesDir)
+
 				return
 			}
 
@@ -56,6 +60,7 @@ func newInitCmd() *cobra.Command {
 			fmt.Printf("Copying templates from %s to %s\n", srcTemplatesDir, destTemplatesDir)
 			if err := copy.Copy(srcTemplatesDir, destTemplatesDir); err != nil {
 				fmt.Printf("Failed to copy templates: %v\n", err)
+
 				return
 			}
 			fmt.Println("Templates copied successfully.")
@@ -67,6 +72,7 @@ func newInitCmd() *cobra.Command {
 				cfg := config.GetDefaultConfig()
 				if err := config.SaveConfig(cfg); err != nil {
 					fmt.Printf("Failed to save default config: %v\n", err)
+
 					return
 				}
 				fmt.Println("Created configuration file with default settings.")

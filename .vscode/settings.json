@@ -1,14 +1,4 @@
 {
     "go.goroot": "~/.local/share/mise/installs/go/1.24.0",
-    "go.lintTool": "golangci-lint",
-    "go.lintFlags": [
-        "--fast"
-    ],
-    "go.lintOnSave": "package",
-    "editor.formatOnSave": true,
-    "[go]": {
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        }
-    }
+    "go.lintTool": "golangci-lint"
 }
